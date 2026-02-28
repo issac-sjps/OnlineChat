@@ -1101,46 +1101,59 @@ async function clearAllData(dateStr) {
   try {
     toast('🌙 凌晨重置中，請稍候…', 3000);
 
-    // 1. 清大廳訊息 + typing
+    // ── 第一步：自己負責清自己有權限的資料 ──
+    // 1. 清大廳訊息
     await set(dbRef(db, 'global/messages'), null);
+
+    // 2. 清大廳 typing（現在 rules 允許整個清）
     await set(dbRef(db, 'global/typing'), null);
 
-    // 2. 清所有私訊
-    await set(dbRef(db, 'dms'), null);
-
-    // 3. 清在線名單（踢掉所有人，各自重新上線會重新寫入）
-    await set(dbRef(db, 'presence'), null);
-
-    // 4. 重置本月 Storage quota 計數
+    // 3. 清 quota 計數
     await set(dbRef(db, 'quota'), null);
 
-    // 5. 刪除 Storage 所有檔案（遞迴）
+    // 4. 刪除 Storage 所有檔案（遞迴）
     try {
       await deleteStorageFolder(stRef(storage, 'dms'));
     } catch(e) {
       console.warn('Storage delete skipped (may be empty):', e.message);
     }
 
-    // 6. 記錄清空日期
+    // 5. 記錄清空日期 + 寫入 clearSignal 通知所有在線客戶端
+    const clearPayload = { date: dateStr, ts: serverTimestamp() };
     await set(dbRef(db, 'meta/lastClearDate'), dateStr);
-
-    // 7. 清本地記錄
-    localStorage.removeItem('dmConvs_v2');
-    renderDMConvList();
-
-    // 8. 清畫面
-    document.getElementById('global-messages').innerHTML = '';
-    document.getElementById('dm-messages').innerHTML = '';
+    await set(dbRef(db, 'clearSignal'), clearPayload);
+    // clearSignal 會觸發所有客戶端執行 handleClearSignal()
+    // 各自清自己的 presence、dms room、本地資料
 
     toast('✅ 聊天室已於凌晨 1:00 重置完畢', 6000);
-
-    // 9. 2 秒後重新寫入自己的 presence（因為被清掉了）
-    setTimeout(() => setupPresence(), 2000);
 
   } catch(e) {
     console.error('Auto clear failed:', e);
     toast('⚠️ 重置時發生錯誤：' + e.message, 4000);
   }
+}
+
+// 每個客戶端收到 clearSignal 後，各自清自己負責的資料
+async function handleClearSignal() {
+  // 清自己的 presence
+  await remove(dbRef(db, 'presence/' + myUid));
+
+  // 清本地 DM conv list
+  localStorage.removeItem('dmConvs_v2');
+  renderDMConvList();
+
+  // 清畫面上的訊息
+  document.getElementById('global-messages').innerHTML = '';
+  document.getElementById('dm-messages').innerHTML = '';
+
+  // 如果正在開著 DM，關掉回列表
+  if (dmUnsub) { dmUnsub(); dmUnsub = null; }
+  document.getElementById('panel-dm').classList.remove('open');
+  document.getElementById('dm-list-panel').classList.remove('hide');
+  dmUid = null; dmNick = null; dmRoomId = null;
+
+  // 2 秒後重新寫入自己的 presence（重新上線）
+  setTimeout(() => setupPresence(), 2000);
 }
 
 // 遞迴刪除 Storage 資料夾內所有檔案
@@ -1151,6 +1164,22 @@ async function deleteStorageFolder(folderRef) {
   // 遞迴刪子資料夾
   const folderDeletes = res.prefixes.map(prefix => deleteStorageFolder(prefix));
   await Promise.all([...fileDeletes, ...folderDeletes]);
+}
+
+
+// 監聽其他客戶端發出的 clearSignal
+let lastHandledClearTs = 0;
+function listenClearSignal() {
+  onValue(dbRef(db, 'clearSignal'), async snap => {
+    if (!snap.exists()) return;
+    const sig = snap.val();
+    const sigTs = sig.ts || 0;
+    // 避免重複處理（同一個 ts 只處理一次）
+    if (sigTs <= lastHandledClearTs) return;
+    lastHandledClearTs = sigTs;
+    // 只有不是自己觸發清空的才需要處理（自己觸發的已在 clearAllData 裡處理）
+    await handleClearSignal();
+  });
 }
 
 // 每分鐘檢查一次
@@ -1511,6 +1540,7 @@ function enterChat() {
   setupEmojiButtons();
   renderDMConvList();
   startAutoClearScheduler();
+  listenClearSignal();
   setupPresence();
   listenGlobal();
   listenUsers();
