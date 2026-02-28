@@ -438,6 +438,16 @@ body {
     </div>
     <div class="panel-section">在線用戶 (<span id="online-count">0</span>)</div>
     <div class="user-list" id="user-list"></div>
+    <!-- Quota bar -->
+    <div style="padding:10px 14px 6px; border-top:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span id="quota-label" style="font-size:0.7rem;color:var(--muted)">Storage 本月：讀取中…</span>
+      </div>
+      <div style="height:4px;background:var(--border);border-radius:99px;overflow:hidden">
+        <div id="quota-bar-fill" style="height:100%;width:0%;background:var(--accent);border-radius:99px;transition:width 0.4s,background 0.3s"></div>
+      </div>
+    </div>
+
     <div class="my-info">
       <div class="user-avatar" id="my-avatar" style="background:#1e3a5f"></div>
       <div>
@@ -493,55 +503,50 @@ body {
 <div id="toast"></div>
 
 <!-- ════════════════════════════════════════
-     FIREBASE SDK  (compat version)
+     FIREBASE SDK  (module version v12)
      ════════════════════════════════════════ -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
-
-<script>
-// ════════════════════════════════════════════════════
-//  ⚙️  STEP 1: 填入你的 Firebase 設定
-//  到 Firebase Console → 專案設定 → 你的應用程式 → 複製 firebaseConfig
-// ════════════════════════════════════════════════════
-
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
-
-  // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-  const firebaseConfig = {
-    apiKey: "AIzaSyCsjUt0p8q0lV5ThMnAfJva60YkvfP-jlk",
-    authDomain: "onlinechat-aa697.firebaseapp.com",
-    projectId: "onlinechat-aa697",
-    storageBucket: "onlinechat-aa697.firebasestorage.app",
-    messagingSenderId: "783019025687",
-    appId: "1:783019025687:web:01676384ee6fd544034352",
-    measurementId: "G-QTR14CXC41"
-  };
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-
+<script type="module">
+import { initializeApp }          from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+import { getAnalytics }           from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
+import { getAuth, signInAnonymously, onAuthStateChanged }
+                                  from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+import { getDatabase, ref as dbRef, set, get, push, remove, update,
+         onValue, onChildAdded, onDisconnect, serverTimestamp, query,
+         limitToLast, orderByKey }
+                                  from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+import { getStorage, ref as stRef, uploadBytesResumable, getDownloadURL }
+                                  from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 
 // ════════════════════════════════════════════════════
-//  ⚙️  STEP 2: 設定 (可選)
+//  ✅ 你的 Firebase 設定（已填入）
 // ════════════════════════════════════════════════════
-const MAX_GLOBAL_MSGS = 100;   // 大廳保留幾則訊息
-const MAX_FILE_MB = 10;        // 最大上傳檔案 MB
+const firebaseConfig = {
+  apiKey: "AIzaSyCsjUt0p8q0lV5ThMnAfJva60YkvfP-jlk",
+  authDomain: "onlinechat-aa697.firebaseapp.com",
+  projectId: "onlinechat-aa697",
+  storageBucket: "onlinechat-aa697.firebasestorage.app",
+  messagingSenderId: "783019025687",
+  appId: "1:783019025687:web:01676384ee6fd544034352",
+  measurementId: "G-QTR14CXC41",
+  databaseURL: "https://onlinechat-aa697-default-rtdb.asia-southeast1.firebasedatabase.app"
+};
+
+// ════════════════════════════════════════════════════
+//  ⚙️  設定
+// ════════════════════════════════════════════════════
+const MAX_GLOBAL_MSGS  = 100;    // 大廳保留幾則訊息
+const MAX_FILE_MB      = 20;     // 單檔最大 MB
+const STORAGE_QUOTA_GB = 5;      // Firebase 免費方案 Storage 總額度
+const QUOTA_LOCK_PCT    = 90;     // 🔒 達到幾 % 就鎖住上傳
 
 // ════════════════════════════════════════════════════
 //  初始化 Firebase
 // ════════════════════════════════════════════════════
-firebase.initializeApp(firebaseConfig);
-const auth     = firebase.auth();
-const db       = firebase.database();
-const storage  = firebase.storage();
+const app      = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const auth     = getAuth(app);
+const db       = getDatabase(app);
+const storage  = getStorage(app);
 
 // ════════════════════════════════════════════════════
 //  狀態
@@ -551,7 +556,7 @@ let myNick = null;
 let dmUid = null;
 let dmNick = null;
 let dmRoomId = null;
-let dmListener = null;
+let dmUnsub = null;    // unsubscribe fn for DM listener
 let typingTimer = null;
 let selectedFile = null;
 const unreadDM = {};
@@ -568,34 +573,86 @@ function avatarColor(uid) {
   for (let c of uid) h = (h * 31 + c.charCodeAt(0)) & 0xffffff;
   return avatarColors[h % avatarColors.length];
 }
-function initials(name) {
-  return (name || '?').slice(0, 2).toUpperCase();
-}
+function initials(name) { return (name || '?').slice(0, 2).toUpperCase(); }
 function formatTime(ts) {
   const d = new Date(ts);
   return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
 }
-function roomId(a, b) {
-  return [a, b].sort().join('__');
-}
-function toast(msg, duration = 2500) {
+function makeRoomId(a, b) { return [a, b].sort().join('__'); }
+function toast(msg, duration = 3000) {
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.classList.add('show');
   setTimeout(() => el.classList.remove('show'), duration);
 }
-function scrollBottom(el) {
-  el.scrollTop = el.scrollHeight;
-}
+function scrollBottom(el) { el.scrollTop = el.scrollHeight; }
 function autoResize(ta) {
   ta.style.height = 'auto';
   ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+}
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+function monthKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+// ════════════════════════════════════════════════════
+//  📊 QUOTA — 每月上傳量追蹤
+//  記錄在 DB /quota/{monthKey}/bytesUsed
+//  累積上傳達到 QUOTA_LOCK_PCT% 就鎖住，每月自動重置
+// ════════════════════════════════════════════════════
+const QUOTA_TOTAL_BYTES = STORAGE_QUOTA_GB * 1024 * 1024 * 1024;
+const QUOTA_LIMIT_BYTES = QUOTA_TOTAL_BYTES * (QUOTA_LOCK_PCT / 100);
+let currentMonthBytes = 0;
+
+async function loadQuota() {
+  const snap = await get(dbRef(db, `quota/${monthKey()}/bytesUsed`));
+  currentMonthBytes = snap.exists() ? snap.val() : 0;
+  updateQuotaUI();
+}
+
+async function addQuota(bytes) {
+  currentMonthBytes += bytes;
+  await set(dbRef(db, `quota/${monthKey()}/bytesUsed`), currentMonthBytes);
+  updateQuotaUI();
+}
+
+function updateQuotaUI() {
+  const pct = Math.min((currentMonthBytes / QUOTA_LIMIT_BYTES) * 100, 100);
+  const usedGB = (currentMonthBytes / (1024**3)).toFixed(2);
+  const el = document.getElementById('quota-bar-fill');
+  const label = document.getElementById('quota-label');
+  if (el) el.style.width = pct + '%';
+  if (el) el.style.background = pct >= 90 ? '#f87171' : pct >= 60 ? '#fbbf24' : '#22d3ee';
+  const totalGB = STORAGE_QUOTA_GB;
+  const lockGB = (QUOTA_LOCK_PCT / 100 * totalGB).toFixed(1);
+  if (label) label.textContent = `Storage 本月：${usedGB} GB／上限 ${lockGB} GB（免費 ${totalGB}GB 的 ${QUOTA_LOCK_PCT}%）`;
+
+  const locked = currentMonthBytes >= QUOTA_LIMIT_BYTES;
+  const fileBtn = document.querySelector('.btn-file');
+  const fileInput = document.getElementById('dm-file-input');
+  if (fileBtn) {
+    fileBtn.disabled = locked;
+    fileBtn.title = locked ? '本月上傳已達上限，下個月重置' : '';
+    fileBtn.style.opacity = locked ? '0.4' : '';
+    fileBtn.style.cursor = locked ? 'not-allowed' : '';
+  }
+  if (fileInput) fileInput.disabled = locked;
+}
+
+function isQuotaExceeded() {
+  return currentMonthBytes >= QUOTA_LIMIT_BYTES;
 }
 
 // ════════════════════════════════════════════════════
 //  AUTH — 匿名登入
 // ════════════════════════════════════════════════════
-auth.onAuthStateChanged(user => {
+onAuthStateChanged(auth, user => {
   setTimeout(() => {
     const ls = document.getElementById('loading-screen');
     ls.classList.add('hide');
@@ -604,14 +661,10 @@ auth.onAuthStateChanged(user => {
     if (user) {
       myUid = user.uid;
       const savedNick = localStorage.getItem('chatNick_' + myUid);
-      if (savedNick) {
-        myNick = savedNick;
-        enterChat();
-      } else {
-        showNickModal();
-      }
+      if (savedNick) { myNick = savedNick; enterChat(); }
+      else showNickModal();
     } else {
-      auth.signInAnonymously().catch(err => {
+      signInAnonymously(auth).catch(err => {
         console.error(err);
         toast('連線失敗，請重新整理');
       });
@@ -642,12 +695,12 @@ function submitNick() {
 //  ENTER CHAT
 // ════════════════════════════════════════════════════
 function enterChat() {
-  // my info display
   const myAvEl = document.getElementById('my-avatar');
   myAvEl.textContent = initials(myNick);
   myAvEl.style.background = avatarColor(myUid);
   document.getElementById('my-name-display').textContent = myNick;
 
+  loadQuota();
   setupPresence();
   listenGlobal();
   listenUsers();
@@ -655,26 +708,24 @@ function enterChat() {
 }
 
 // ════════════════════════════════════════════════════
-//  PRESENCE — 在線列表
+//  PRESENCE
 // ════════════════════════════════════════════════════
 function setupPresence() {
-  const presRef = db.ref('presence/' + myUid);
-  const connRef = db.ref('.info/connected');
-
-  connRef.on('value', snap => {
+  const presR = dbRef(db, 'presence/' + myUid);
+  const connR = dbRef(db, '.info/connected');
+  onValue(connR, snap => {
     if (!snap.val()) return;
-    presRef.onDisconnect().remove();
-    presRef.set({ nick: myNick, uid: myUid, ts: firebase.database.ServerValue.TIMESTAMP });
+    onDisconnect(presR).remove();
+    set(presR, { nick: myNick, uid: myUid, ts: serverTimestamp() });
   });
 }
 
 function listenUsers() {
-  db.ref('presence').on('value', snap => {
+  onValue(dbRef(db, 'presence'), snap => {
     const users = snap.val() || {};
     const list = document.getElementById('user-list');
     list.innerHTML = '';
     let count = 0;
-
     Object.entries(users).forEach(([uid, info]) => {
       count++;
       const isMe = uid === myUid;
@@ -684,15 +735,12 @@ function listenUsers() {
         <div class="user-avatar" style="background:${avatarColor(uid)}">${initials(info.nick)}
           <div class="avatar-dot"></div>
         </div>
-        <div class="user-name${isMe ? ' you' : ''}">${info.nick}${isMe ? ' (我)' : ''}</div>
+        <div class="user-name${isMe ? ' you' : ''}">${escapeHtml(info.nick)}${isMe ? ' (我)' : ''}</div>
         <div class="dm-badge${(unreadDM[uid] && !isMe) ? ' show' : ''}" id="badge-${uid}">${unreadDM[uid] || ''}</div>
       `;
-      if (!isMe) {
-        div.addEventListener('click', () => openDM(uid, info.nick));
-      }
+      if (!isMe) div.addEventListener('click', () => openDM(uid, info.nick));
       list.appendChild(div);
     });
-
     document.getElementById('online-count').textContent = count;
     document.getElementById('topbar-count').textContent = count;
   });
@@ -703,9 +751,9 @@ function listenUsers() {
 // ════════════════════════════════════════════════════
 function listenGlobal() {
   const msgContainer = document.getElementById('global-messages');
-  db.ref('global/messages').limitToLast(MAX_GLOBAL_MSGS).on('child_added', snap => {
-    const msg = snap.val();
-    renderGlobalMsg(msg, msgContainer);
+  const q = query(dbRef(db, 'global/messages'), limitToLast(MAX_GLOBAL_MSGS));
+  onChildAdded(q, snap => {
+    renderGlobalMsg(snap.val(), msgContainer);
     scrollBottom(msgContainer);
   });
 }
@@ -723,7 +771,7 @@ function renderGlobalMsg(msg, container) {
   div.className = 'msg-row' + (isSelf ? ' self' : '');
   div.innerHTML = `
     <div class="msg-meta">
-      <span class="msg-author" style="color:${avatarColor(msg.uid)}">${msg.nick}</span>
+      <span class="msg-author" style="color:${avatarColor(msg.uid)}">${escapeHtml(msg.nick)}</span>
       <span class="msg-time">${formatTime(msg.ts)}</span>
     </div>
     <div class="msg-bubble">${escapeHtml(msg.text)}</div>
@@ -734,62 +782,44 @@ function renderGlobalMsg(msg, container) {
 function setupGlobalInput() {
   const input = document.getElementById('global-input');
   const btn = document.getElementById('global-send');
-
   btn.addEventListener('click', sendGlobal);
   input.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendGlobal();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendGlobal(); }
   });
-  input.addEventListener('input', () => {
-    autoResize(input);
-    handleTyping();
-  });
+  input.addEventListener('input', () => { autoResize(input); handleTyping(); });
 
-  // listen typing
-  db.ref('global/typing').on('value', snap => {
+  onValue(dbRef(db, 'global/typing'), snap => {
     const typingUsers = snap.val() || {};
     const names = Object.entries(typingUsers)
-      .filter(([uid, _]) => uid !== myUid)
-      .map(([_, name]) => name);
-    const el = document.getElementById('global-typing');
-    el.textContent = names.length ? names.join(', ') + ' 正在輸入…' : '';
+      .filter(([uid]) => uid !== myUid).map(([, name]) => name);
+    document.getElementById('global-typing').textContent =
+      names.length ? names.join(', ') + ' 正在輸入…' : '';
   });
 }
 
 function handleTyping() {
-  db.ref('global/typing/' + myUid).set(myNick);
+  set(dbRef(db, 'global/typing/' + myUid), myNick);
   clearTimeout(typingTimer);
-  typingTimer = setTimeout(() => {
-    db.ref('global/typing/' + myUid).remove();
-  }, 2000);
+  typingTimer = setTimeout(() => remove(dbRef(db, 'global/typing/' + myUid)), 2000);
 }
 
 async function sendGlobal() {
   const input = document.getElementById('global-input');
   const text = input.value.trim();
   if (!text) return;
-
-  db.ref('global/typing/' + myUid).remove();
-  input.value = '';
-  autoResize(input);
-
-  await db.ref('global/messages').push({
-    uid: myUid, nick: myNick,
-    text, ts: firebase.database.ServerValue.TIMESTAMP
+  remove(dbRef(db, 'global/typing/' + myUid));
+  input.value = ''; autoResize(input);
+  await push(dbRef(db, 'global/messages'), {
+    uid: myUid, nick: myNick, text, ts: serverTimestamp()
   });
-
-  // trim to MAX_GLOBAL_MSGS
-  const snap = await db.ref('global/messages').once('value');
-  const msgs = snap.val();
-  if (msgs) {
-    const keys = Object.keys(msgs);
+  // trim old messages
+  const snap = await get(dbRef(db, 'global/messages'));
+  if (snap.exists()) {
+    const keys = Object.keys(snap.val());
     if (keys.length > MAX_GLOBAL_MSGS) {
-      const toDelete = keys.slice(0, keys.length - MAX_GLOBAL_MSGS);
-      const updates = {};
-      toDelete.forEach(k => updates['global/messages/' + k] = null);
-      db.ref().update(updates);
+      const upd = {};
+      keys.slice(0, keys.length - MAX_GLOBAL_MSGS).forEach(k => upd['global/messages/' + k] = null);
+      update(dbRef(db), upd);
     }
   }
 }
@@ -798,73 +828,57 @@ async function sendGlobal() {
 //  DM (PRIVATE CHAT)
 // ════════════════════════════════════════════════════
 function openDM(uid, nick) {
-  // clean old listener
-  if (dmRoomId && dmListener) {
-    db.ref('dms/' + dmRoomId + '/messages').off('child_added', dmListener);
-  }
-
-  dmUid = uid;
-  dmNick = nick;
-  dmRoomId = roomId(myUid, uid);
+  if (dmUnsub) { dmUnsub(); dmUnsub = null; }
+  dmUid = uid; dmNick = nick;
+  dmRoomId = makeRoomId(myUid, uid);
   unreadDM[uid] = 0;
 
   document.getElementById('dm-with-name').textContent = nick;
   document.getElementById('panel-dm').classList.add('open');
   document.getElementById('dm-messages').innerHTML = '';
 
-  // update badge
   const badge = document.getElementById('badge-' + uid);
   if (badge) { badge.textContent = ''; badge.classList.remove('show'); }
-
-  // mark active
   document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
 
-  // listen DM messages
   const msgContainer = document.getElementById('dm-messages');
-  dmListener = db.ref('dms/' + dmRoomId + '/messages').limitToLast(100).on('child_added', snap => {
-    const msg = snap.val();
-    renderDMMsg(msg, msgContainer);
+  const q = query(dbRef(db, 'dms/' + dmRoomId + '/messages'), limitToLast(100));
+  dmUnsub = onChildAdded(q, snap => {
+    renderDMMsg(snap.val(), msgContainer);
     scrollBottom(msgContainer);
   });
 
-  // DM send
-  const dmInput = document.getElementById('dm-input');
-  const dmBtn = document.getElementById('dm-send');
-  dmBtn.onclick = sendDM;
-  dmInput.onkeydown = e => { if (e.key === 'Enter') sendDM(); };
+  document.getElementById('dm-send').onclick = sendDM;
+  document.getElementById('dm-input').onkeydown = e => { if (e.key === 'Enter') sendDM(); };
 }
 
 function renderDMMsg(msg, container) {
   const isSelf = msg.uid === myUid;
   const div = document.createElement('div');
   div.className = 'msg-row' + (isSelf ? ' self' : '');
-
   if (msg.type === 'file') {
     div.innerHTML = `
       <div class="msg-meta">
-        <span class="msg-author" style="color:${avatarColor(msg.uid)}">${msg.nick}</span>
+        <span class="msg-author" style="color:${avatarColor(msg.uid)}">${escapeHtml(msg.nick)}</span>
         <span class="msg-time">${formatTime(msg.ts)}</span>
       </div>
       <div class="file-msg">
         <div class="file-icon">📄</div>
         <div class="file-info">
           <div class="file-name">${escapeHtml(msg.fileName)}</div>
-          <div class="file-dl" onclick="window.open('${msg.url}','_blank')">下載 ↓</div>
+          <a class="file-dl" href="${msg.url}" target="_blank" rel="noopener">下載 ↓</a>
         </div>
-      </div>
-    `;
+      </div>`;
   } else {
     div.innerHTML = `
       <div class="msg-meta">
-        <span class="msg-author" style="color:${avatarColor(msg.uid)}">${msg.nick}</span>
+        <span class="msg-author" style="color:${avatarColor(msg.uid)}">${escapeHtml(msg.nick)}</span>
         <span class="msg-time">${formatTime(msg.ts)}</span>
       </div>
-      <div class="msg-bubble">${escapeHtml(msg.text)}</div>
-    `;
+      <div class="msg-bubble">${escapeHtml(msg.text)}</div>`;
   }
   container.appendChild(div);
 
-  // unread badge when DM panel not open
   if (!isSelf && (!document.getElementById('panel-dm').classList.contains('open') || dmUid !== msg.uid)) {
     unreadDM[msg.uid] = (unreadDM[msg.uid] || 0) + 1;
     const badge = document.getElementById('badge-' + msg.uid);
@@ -877,7 +891,6 @@ async function sendDM() {
   const input = document.getElementById('dm-input');
   const text = input.value.trim();
   const file = selectedFile;
-
   if (!text && !file) return;
   input.value = '';
 
@@ -887,21 +900,24 @@ async function sendDM() {
     document.getElementById('file-preview-name').textContent = '';
     document.getElementById('dm-file-input').value = '';
   }
-
   if (text) {
-    await db.ref('dms/' + dmRoomId + '/messages').push({
-      uid: myUid, nick: myNick,
-      text, ts: firebase.database.ServerValue.TIMESTAMP
+    await push(dbRef(db, 'dms/' + dmRoomId + '/messages'), {
+      uid: myUid, nick: myNick, text, ts: serverTimestamp()
     });
   }
 }
 
 // ════════════════════════════════════════════════════
-//  FILE UPLOAD
+//  FILE UPLOAD + QUOTA CHECK
 // ════════════════════════════════════════════════════
 document.getElementById('dm-file-input').addEventListener('change', function() {
   const file = this.files[0];
   if (!file) return;
+  if (isQuotaExceeded()) {
+    toast('🔒 本月上傳已達上限，無法傳送檔案');
+    this.value = '';
+    return;
+  }
   if (file.size > MAX_FILE_MB * 1024 * 1024) {
     toast(`檔案不能超過 ${MAX_FILE_MB}MB`);
     this.value = '';
@@ -912,6 +928,8 @@ document.getElementById('dm-file-input').addEventListener('change', function() {
 });
 
 async function uploadAndSend(file) {
+  if (isQuotaExceeded()) { toast('🔒 本月上傳已達上限'); return; }
+
   const btn = document.getElementById('dm-send');
   btn.disabled = true;
   const progressBar = document.getElementById('upload-progress-bar');
@@ -920,27 +938,27 @@ async function uploadAndSend(file) {
 
   try {
     const path = `dms/${dmRoomId}/${Date.now()}_${file.name}`;
-    const ref = storage.ref(path);
-    const task = ref.put(file);
+    const fileRef = stRef(storage, path);
+    const task = uploadBytesResumable(fileRef, file);
 
     await new Promise((resolve, reject) => {
       task.on('state_changed',
-        snap => {
-          const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
-          fill.style.width = pct + '%';
-        },
+        snap => { fill.style.width = ((snap.bytesTransferred / snap.totalBytes) * 100) + '%'; },
         reject,
         resolve
       );
     });
 
-    const url = await ref.getDownloadURL();
-    await db.ref('dms/' + dmRoomId + '/messages').push({
+    // ✅ 上傳成功：記錄用量
+    await addQuota(file.size);
+
+    const url = await getDownloadURL(fileRef);
+    await push(dbRef(db, 'dms/' + dmRoomId + '/messages'), {
       uid: myUid, nick: myNick,
       type: 'file', fileName: file.name, url,
-      ts: firebase.database.ServerValue.TIMESTAMP
+      ts: serverTimestamp()
     });
-    toast('檔案傳送成功！');
+    toast('✅ 檔案傳送成功！');
   } catch (err) {
     console.error(err);
     toast('上傳失敗：' + err.message);
@@ -956,10 +974,8 @@ async function uploadAndSend(file) {
 // ════════════════════════════════════════════════════
 document.getElementById('close-dm').addEventListener('click', () => {
   document.getElementById('panel-dm').classList.remove('open');
-  if (dmRoomId && dmListener) {
-    db.ref('dms/' + dmRoomId + '/messages').off('child_added', dmListener);
-  }
-  dmUid = null; dmNick = null; dmRoomId = null; dmListener = null;
+  if (dmUnsub) { dmUnsub(); dmUnsub = null; }
+  dmUid = null; dmNick = null; dmRoomId = null;
   document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
 });
 
@@ -970,15 +986,6 @@ document.getElementById('hamburger').addEventListener('click', () => {
   document.getElementById('panel-left').classList.toggle('mob-open');
 });
 
-// ════════════════════════════════════════════════════
-//  XSS PROTECTION
-// ════════════════════════════════════════════════════
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
-    .replace(/'/g,'&#39;');
-}
 </script>
 </body>
 </html>
