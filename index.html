@@ -208,31 +208,58 @@ body {
   display: flex; flex-direction: column; gap: 4px;
 }
 .msg-group { margin-bottom: 8px; }
+/* ── LINE-STYLE MESSAGES ── */
+.msg-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 8px;
+  margin-bottom: 10px;
+  max-width: 80%;
+}
+.msg-row.self {
+  flex-direction: row-reverse;
+  margin-left: auto;
+}
+.msg-row.other {
+  margin-right: auto;
+}
+.msg-avatar {
+  width: 34px; height: 34px; min-width: 34px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.8rem;
+  flex-shrink: 0;
+  align-self: flex-end;
+}
+.msg-content { display: flex; flex-direction: column; gap: 3px; }
+.msg-row.self .msg-content { align-items: flex-end; }
+.msg-row.other .msg-content { align-items: flex-start; }
+
 .msg-meta {
-  display: flex; align-items: baseline; gap: 8px;
-  margin-bottom: 3px; padding: 0 2px;
-}
-.msg-author {
-  font-size: 0.8rem; font-weight: 600;
-}
-.msg-time {
-  font-size: 0.7rem; color: var(--muted);
-}
-.msg-bubble {
-  display: inline-block;
-  padding: 8px 12px; border-radius: 10px;
-  font-size: 0.88rem; line-height: 1.55;
-  max-width: 100%; word-break: break-word;
-  background: var(--msg-other);
+  display: flex; align-items: baseline; gap: 6px;
+  padding: 0 4px;
 }
 .msg-row.self .msg-meta { flex-direction: row-reverse; }
-.msg-row.self .msg-bubble {
-  background: var(--msg-self);
-  border-bottom-right-radius: 3px;
+.msg-author { font-size: 0.75rem; font-weight: 600; }
+.msg-time { font-size: 0.68rem; color: var(--muted); }
+
+.msg-bubble {
+  display: inline-block;
+  padding: 9px 13px;
+  border-radius: 18px;
+  font-size: 0.875rem; line-height: 1.55;
+  max-width: 100%; word-break: break-word;
 }
-.msg-row .msg-bubble { border-bottom-left-radius: 3px; }
-.msg-row { display: flex; flex-direction: column; }
-.msg-row.self { align-items: flex-end; }
+.msg-row.other .msg-bubble {
+  background: var(--msg-other);
+  border-bottom-left-radius: 4px;
+}
+.msg-row.self .msg-bubble {
+  background: var(--accent);
+  color: #000;
+  border-bottom-right-radius: 4px;
+}
 
 /* System messages */
 .msg-system {
@@ -441,8 +468,12 @@ body {
 <div id="nick-modal" class="hide">
   <div class="modal-box">
     <div class="modal-title">👋 歡迎加入</div>
-    <div class="modal-sub">請輸入你的暱稱，其他人會看到這個名字</div>
+    <div class="modal-sub">設定你的暱稱和頭像顏色</div>
     <input class="modal-input" id="nick-input" type="text" placeholder="你的暱稱" maxlength="20" autocomplete="off">
+    <div style="margin-bottom:14px">
+      <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">選擇頭像顏色</div>
+      <div id="color-picker" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    </div>
     <button class="btn-enter" id="nick-btn">進入聊天室 →</button>
   </div>
 </div>
@@ -469,10 +500,11 @@ body {
 
     <div class="my-info">
       <div class="user-avatar" id="my-avatar" style="background:#1e3a5f"></div>
-      <div>
+      <div style="flex:1;min-width:0">
         <div class="my-name" id="my-name-display">—</div>
         <div class="my-status">● 在線</div>
       </div>
+      <button id="settings-btn" title="設定" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:4px;border-radius:6px;transition:color 0.2s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">⚙️</button>
     </div>
   </div>
 
@@ -519,6 +551,22 @@ body {
     </div>
   </div>
 
+</div>
+
+
+<!-- Settings Modal -->
+<div id="settings-modal" style="display:none;position:fixed;inset:0;z-index:95;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);align-items:center;justify-content:center">
+  <div class="modal-box">
+    <div class="modal-title" style="margin-bottom:16px">⚙️ 個人設定</div>
+    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:6px">修改暱稱</div>
+    <input class="modal-input" id="settings-nick" type="text" placeholder="新暱稱" maxlength="20" autocomplete="off" style="margin-bottom:14px">
+    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">更換頭像顏色</div>
+    <div id="settings-color-picker" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-enter" id="settings-save" style="flex:1">儲存</button>
+      <button id="settings-cancel" style="flex:0.5;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;font-family:inherit">取消</button>
+    </div>
+  </div>
 </div>
 
 <!-- Toast -->
@@ -582,18 +630,27 @@ let dmUnsub = null;    // unsubscribe fn for DM listener
 let typingTimer = null;
 let selectedFile = null;
 const unreadDM = {};
-const avatarColors = [
-  '#1e3a5f','#1a2e4a','#2d1b69','#1e4036','#3d1a1a',
-  '#3d2a0d','#1a3d2b','#2a1a3d','#0d2d3d','#3d1a2d'
+const AVATAR_COLORS = [
+  '#ef4444','#f97316','#eab308','#22c55e','#14b8a6',
+  '#06b6d4','#3b82f6','#8b5cf6','#ec4899','#f43f5e',
+  '#10b981','#6366f1','#f59e0b','#84cc16','#0ea5e9'
 ];
+
+// 取出自訂色（如果有的話）
+function getUserColor(uid) {
+  const custom = localStorage.getItem('avatarColor_' + uid);
+  return custom || null;
+}
 
 // ════════════════════════════════════════════════════
 //  Utility
 // ════════════════════════════════════════════════════
 function avatarColor(uid) {
+  const custom = getUserColor(uid);
+  if (custom) return custom;
   let h = 0;
   for (let c of uid) h = (h * 31 + c.charCodeAt(0)) & 0xffffff;
-  return avatarColors[h % avatarColors.length];
+  return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
 }
 function initials(name) { return (name || '?').slice(0, 2).toUpperCase(); }
 function formatTime(ts) {
@@ -672,30 +729,149 @@ function isQuotaExceeded() {
 }
 
 // ════════════════════════════════════════════════════
+//  🎨 COLOR PICKER
+// ════════════════════════════════════════════════════
+function buildColorPicker(containerId, selectedColor, onSelect) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  AVATAR_COLORS.forEach(color => {
+    const swatch = document.createElement('div');
+    swatch.style.cssText = `
+      width:28px;height:28px;border-radius:50%;background:${color};cursor:pointer;
+      border:3px solid ${color === selectedColor ? '#fff' : 'transparent'};
+      transition:transform 0.15s,border-color 0.15s;box-sizing:border-box;
+    `;
+    swatch.title = color;
+    swatch.addEventListener('click', () => {
+      container.querySelectorAll('div').forEach(s => s.style.borderColor = 'transparent');
+      swatch.style.borderColor = '#fff';
+      swatch.style.transform = 'scale(1.2)';
+      setTimeout(() => swatch.style.transform = '', 150);
+      onSelect(color);
+    });
+    swatch.addEventListener('mouseover', () => { swatch.style.transform = 'scale(1.15)'; });
+    swatch.addEventListener('mouseout', () => { swatch.style.transform = ''; });
+    container.appendChild(swatch);
+  });
+}
+
+let pendingColor = null;  // 入場時選的顏色（還沒存）
+
+function initNickModalColorPicker() {
+  const defaultColor = AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+  pendingColor = defaultColor;
+  buildColorPicker('color-picker', defaultColor, c => { pendingColor = c; });
+}
+
+// ════════════════════════════════════════════════════
+//  ⚙️  SETTINGS PANEL
+// ════════════════════════════════════════════════════
+function openSettings() {
+  const modal = document.getElementById('settings-modal');
+  document.getElementById('settings-nick').value = myNick || '';
+  const currentColor = getUserColor(myUid) || avatarColor(myUid);
+  buildColorPicker('settings-color-picker', currentColor, c => {
+    // 即時預覽
+    document.getElementById('my-avatar').style.background = c;
+    localStorage.setItem('avatarColor_' + myUid, c);
+    updateMyPresenceColor(c);
+  });
+  modal.style.display = 'flex';
+  document.getElementById('settings-nick').focus();
+}
+
+function updateMyPresenceColor(color) {
+  // 把顏色存進 presence 讓其他人也能看到
+  set(dbRef(db, 'presence/' + myUid + '/color'), color);
+}
+
+document.getElementById('settings-btn').addEventListener('click', openSettings);
+document.getElementById('settings-cancel').addEventListener('click', () => {
+  document.getElementById('settings-modal').style.display = 'none';
+});
+document.getElementById('settings-save').addEventListener('click', () => {
+  const newNick = document.getElementById('settings-nick').value.trim();
+  if (newNick) {
+    myNick = newNick;
+    localStorage.setItem('chatNick_' + myUid, myNick);
+    document.getElementById('my-name-display').textContent = myNick;
+    set(dbRef(db, 'presence/' + myUid + '/nick'), myNick);
+  }
+  document.getElementById('settings-modal').style.display = 'none';
+  toast('✅ 設定已儲存');
+});
+
+// ════════════════════════════════════════════════════
 //  AUTH — 匿名登入
 // ════════════════════════════════════════════════════
-onAuthStateChanged(auth, user => {
-  setTimeout(() => {
-    const ls = document.getElementById('loading-screen');
-    ls.classList.add('hide');
-    setTimeout(() => ls.remove(), 500);
+// loading screen 只消失一次
+let loadingDone = false;
+function hideLoading() {
+  if (loadingDone) return;
+  loadingDone = true;
+  const ls = document.getElementById('loading-screen');
+  if (ls) { ls.classList.add('hide'); setTimeout(() => ls.remove(), 500); }
+}
 
-    if (user) {
-      myUid = user.uid;
-      const savedNick = localStorage.getItem('chatNick_' + myUid);
-      if (savedNick) { myNick = savedNick; enterChat(); }
-      else showNickModal();
+// ── AUTH 流程 ──
+// 策略：一律等 Firebase DB 真正連線（.info/connected = true）後才進入聊天室
+// 這樣無論是第一次訪問還是有 session，都能確保連線穩定再 enterChat()
+let authHandled = false;
+
+function waitForConnectionThenEnter() {
+  // 等 Firebase Realtime DB 確認連線後才繼續
+  const connRef = dbRef(db, '.info/connected');
+  const unsub = onValue(connRef, (snap) => {
+    if (!snap.val()) return;   // 還沒連上，等下一次觸發
+    unsub();                   // 連上了，取消監聽
+    hideLoading();
+    const savedNick = localStorage.getItem('chatNick_' + myUid);
+    if (savedNick && savedNick.trim()) {
+      myNick = savedNick.trim();
+      enterChat();
     } else {
-      signInAnonymously(auth).catch(err => {
-        console.error(err);
-        toast('連線失敗，請重新整理');
-      });
+      // 清掉可能殘留的空字串
+      localStorage.removeItem('chatNick_' + myUid);
+      showNickModal();
     }
-  }, 1600);
+  });
+
+  // 保底：5 秒內沒連上就還是顯示（避免卡住）
+  setTimeout(() => {
+    if (!loadingDone) {
+      hideLoading();
+      const savedNick = localStorage.getItem('chatNick_' + myUid);
+      if (savedNick && savedNick.trim()) {
+        myNick = savedNick.trim();
+        enterChat();
+      } else {
+        localStorage.removeItem('chatNick_' + myUid);
+        showNickModal();
+      }
+    }
+  }, 5000);
+}
+
+onAuthStateChanged(auth, user => {
+  if (authHandled) return;
+  if (user) {
+    authHandled = true;
+    myUid = user.uid;
+    waitForConnectionThenEnter();
+  } else {
+    // 還沒有 session，發起匿名登入
+    signInAnonymously(auth).catch(err => {
+      console.error(err);
+      hideLoading();
+      toast('連線失敗，請重新整理頁面');
+    });
+  }
 });
 
 function showNickModal() {
   document.getElementById('nick-modal').classList.remove('hide');
+  initNickModalColorPicker();
   document.getElementById('nick-input').focus();
 }
 
@@ -709,6 +885,7 @@ function submitNick() {
   if (!val) { toast('請輸入暱稱'); return; }
   myNick = val;
   localStorage.setItem('chatNick_' + myUid, myNick);
+  if (pendingColor) localStorage.setItem('avatarColor_' + myUid, pendingColor);
   document.getElementById('nick-modal').classList.add('hide');
   enterChat();
 }
@@ -717,9 +894,10 @@ function submitNick() {
 //  ENTER CHAT
 // ════════════════════════════════════════════════════
 function enterChat() {
+  const myColor = avatarColor(myUid);
   const myAvEl = document.getElementById('my-avatar');
   myAvEl.textContent = initials(myNick);
-  myAvEl.style.background = avatarColor(myUid);
+  myAvEl.style.background = myColor;
   document.getElementById('my-name-display').textContent = myNick;
 
   loadQuota();
@@ -812,11 +990,16 @@ function setupNotifications() {
 // ════════════════════════════════════════════════════
 function setupPresence() {
   const presR = dbRef(db, 'presence/' + myUid);
+  // enterChat() 已確保 DB 連線，直接設定 presence 並掛斷線清除
+  onDisconnect(presR).remove();
+  set(presR, { nick: myNick, uid: myUid, color: avatarColor(myUid), ts: serverTimestamp() });
+
+  // 重新連線時也更新（例如網路斷了又回來）
   const connR = dbRef(db, '.info/connected');
   onValue(connR, snap => {
     if (!snap.val()) return;
     onDisconnect(presR).remove();
-    set(presR, { nick: myNick, uid: myUid, ts: serverTimestamp() });
+    set(presR, { nick: myNick, uid: myUid, color: avatarColor(myUid), ts: serverTimestamp() });
   });
 }
 
@@ -831,8 +1014,9 @@ function listenUsers() {
       const isMe = uid === myUid;
       const div = document.createElement('div');
       div.className = 'user-item' + (uid === dmUid ? ' active' : '');
+      const uColor = (uid === myUid ? avatarColor(uid) : (info.color || avatarColor(uid)));
       div.innerHTML = `
-        <div class="user-avatar" style="background:${avatarColor(uid)}">${initials(info.nick)}
+        <div class="user-avatar" style="background:${uColor}">${initials(info.nick)}
           <div class="avatar-dot"></div>
         </div>
         <div class="user-name${isMe ? ' you' : ''}">${escapeHtml(info.nick)}${isMe ? ' (我)' : ''}</div>
@@ -868,16 +1052,20 @@ function renderGlobalMsg(msg, container) {
   }
   const isSelf = msg.uid === myUid;
   const div = document.createElement('div');
-  div.className = 'msg-row' + (isSelf ? ' self' : '');
+  div.className = 'msg-row ' + (isSelf ? 'self' : 'other');
+  const avatarHtml = isSelf ? '' : `<div class="msg-avatar" style="background:${avatarColor(msg.uid)}">${initials(msg.nick)}</div>`;
+  const nameHtml = isSelf ? '' : `<span class="msg-author" style="color:${avatarColor(msg.uid)}">${escapeHtml(msg.nick)}</span>`;
   div.innerHTML = `
-    <div class="msg-meta">
-      <span class="msg-author" style="color:${avatarColor(msg.uid)}">${escapeHtml(msg.nick)}</span>
-      <span class="msg-time">${formatTime(msg.ts)}</span>
+    ${avatarHtml}
+    <div class="msg-content">
+      <div class="msg-meta">
+        ${nameHtml}
+        <span class="msg-time">${formatTime(msg.ts)}</span>
+      </div>
+      <div class="msg-bubble">${escapeHtml(msg.text)}</div>
     </div>
-    <div class="msg-bubble">${escapeHtml(msg.text)}</div>
   `;
   container.appendChild(div);
-  // 通知
   if (!isSelf) sendNotif('💬 大廳', `${escapeHtml(msg.nick)}：${String(msg.text).slice(0,50)}`);
 }
 
@@ -957,14 +1145,12 @@ function openDM(uid, nick) {
 function renderDMMsg(msg, container) {
   const isSelf = msg.uid === myUid;
   const div = document.createElement('div');
-  div.className = 'msg-row' + (isSelf ? ' self' : '');
+  div.className = 'msg-row ' + (isSelf ? 'self' : 'other');
+  const avatarHtml = isSelf ? '' : `<div class="msg-avatar" style="background:${avatarColor(msg.uid)}">${initials(msg.nick)}</div>`;
+  const nameHtml = isSelf ? '' : `<span class="msg-author" style="color:${avatarColor(msg.uid)}">${escapeHtml(msg.nick)}</span>`;
+  let bubbleHtml;
   if (msg.type === 'file') {
-    div.innerHTML = `
-      <div class="msg-meta">
-        <span class="msg-author" style="color:${avatarColor(msg.uid)}">${escapeHtml(msg.nick)}</span>
-        <span class="msg-time">${formatTime(msg.ts)}</span>
-      </div>
-      <div class="file-msg">
+    bubbleHtml = `<div class="file-msg">
         <div class="file-icon">📄</div>
         <div class="file-info">
           <div class="file-name">${escapeHtml(msg.fileName)}</div>
@@ -972,13 +1158,18 @@ function renderDMMsg(msg, container) {
         </div>
       </div>`;
   } else {
-    div.innerHTML = `
+    bubbleHtml = `<div class="msg-bubble">${escapeHtml(msg.text)}</div>`;
+  }
+  div.innerHTML = `
+    ${avatarHtml}
+    <div class="msg-content">
       <div class="msg-meta">
-        <span class="msg-author" style="color:${avatarColor(msg.uid)}">${escapeHtml(msg.nick)}</span>
+        ${nameHtml}
         <span class="msg-time">${formatTime(msg.ts)}</span>
       </div>
-      <div class="msg-bubble">${escapeHtml(msg.text)}</div>`;
-  }
+      ${bubbleHtml}
+    </div>
+  `;
   container.appendChild(div);
   // 通知
   if (!isSelf) {
