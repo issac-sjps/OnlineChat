@@ -586,6 +586,7 @@ body {
   border-top: 1px solid var(--border);
   display: none;
   align-items: center; justify-content: space-around;
+  z-index: 65;
 }
 #mob-nav button {
   flex: 1; height: 100%;
@@ -609,7 +610,7 @@ body {
 /* ── MOBILE OVERLAY (dim behind panels) ── */
 #mob-overlay {
   display: none;
-  position: fixed; inset: 0; z-index: 45;
+  position: fixed; inset: 0; z-index: 55;
   background: rgba(0,0,0,0.5);
   backdrop-filter: blur(2px);
 }
@@ -628,7 +629,7 @@ body {
 
   /* 三個面板都收起，用 mob-show 控制 */
   #panel-left {
-    position: fixed; left: 0; top: 0; bottom: 56px; z-index: 50;
+    position: fixed; left: 0; top: 0; bottom: 56px; z-index: 60;
     width: 80vw; min-width: unset;
     transform: translateX(-100%);
     transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
@@ -637,7 +638,7 @@ body {
   #panel-left.mob-show { transform: translateX(0); }
 
   #panel-right {
-    position: fixed; right: 0; top: 0; bottom: 56px; z-index: 50;
+    position: fixed; right: 0; top: 0; bottom: 56px; z-index: 60;
     width: 90vw; min-width: unset;
     transform: translateX(100%);
     transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
@@ -1775,14 +1776,22 @@ function listenUsers() {
       const div = document.createElement('div');
       div.className = 'user-item' + (uid === dmUid ? ' active' : '');
       const uColor = (uid === myUid ? avatarColor(uid) : (info.color || avatarColor(uid)));
+      // pointer-events:none 讓子元素不攔截 click，全部冒泡到 div
       div.innerHTML = `
-        <div class="user-avatar" style="background:${uColor}">${initials(info.nick)}
-          <div class="avatar-dot"></div>
+        <div class="user-avatar" style="background:${uColor};pointer-events:none">${initials(info.nick)}
+          <div class="avatar-dot" style="pointer-events:none"></div>
         </div>
-        <div class="user-name${isMe ? ' you' : ''}">${escapeHtml(info.nick)}${isMe ? ' (我)' : ''}</div>
-        <div class="dm-badge${(unreadDM[uid] && !isMe) ? ' show' : ''}" id="badge-${uid}">${unreadDM[uid] || ''}</div>
+        <div class="user-name${isMe ? ' you' : ''}" style="pointer-events:none">${escapeHtml(info.nick)}${isMe ? ' (我)' : ''}</div>
+        <div class="dm-badge${(unreadDM[uid] && !isMe) ? ' show' : ''}" id="badge-${uid}" style="pointer-events:none">${unreadDM[uid] || ''}</div>
       `;
-      if (!isMe) div.addEventListener('click', () => openDM(uid, info.nick));
+      if (!isMe) {
+        div.style.cursor = 'pointer';
+        div.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openDM(uid, info.nick);
+          // 手機版切換由 openDM 內部處理
+        });
+      }
       list.appendChild(div);
     });
     document.getElementById('online-count').textContent = count;
@@ -1922,10 +1931,12 @@ function openDM(uid, nick) {
   // Switch panel: hide list, show chat
   document.getElementById('dm-list-panel').classList.add('hide');
   document.getElementById('panel-dm').classList.add('open');
-  // 手機版：確保右側面板顯示
+  // 手機版：切換到 dm tab 並顯示右側面板
   if (isMobile()) {
-    document.getElementById('panel-right').classList.add('mob-show');
-    document.getElementById('mob-overlay').classList.add('show');
+    const right = document.getElementById('panel-right');
+    const overlay = document.getElementById('mob-overlay');
+    right.classList.add('mob-show');
+    overlay.classList.add('show');
     ['lobby','users','dm'].forEach(t => document.getElementById('mob-tab-' + t)?.classList.remove('active'));
     document.getElementById('mob-tab-dm')?.classList.add('active');
     mobCurrentTab = 'dm';
