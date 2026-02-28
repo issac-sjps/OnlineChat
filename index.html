@@ -664,6 +664,7 @@ body {
         <span></span><span></span><span></span>
       </button>
       <div class="chat-title"># 大廳</div>
+      <div id="topbar-clock" style="font-size:0.82rem;color:var(--muted);font-family:'Syne',sans-serif;text-align:center;line-height:1.4;letter-spacing:0.3px"></div>
       <div style="display:flex;align-items:center;gap:12px">
         <button id="notif-btn" title="開啟通知">🔔<div class="notif-dot" id="notif-dot"></div></button>
         <div class="online-count"><span id="topbar-count">0</span> 人在線</div>
@@ -752,7 +753,7 @@ import { getDatabase, ref as dbRef, set, get, push, remove, update,
          onValue, onChildAdded, onDisconnect, serverTimestamp, query,
          limitToLast, orderByKey }
                                   from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
-import { getStorage, ref as stRef, uploadBytesResumable, getDownloadURL }
+import { getStorage, ref as stRef, uploadBytesResumable, getDownloadURL, listAll, deleteObject }
                                   from "https://www.gstatic.com/firebasejs/12.10.0/firebase-storage.js";
 
 // ════════════════════════════════════════════════════
@@ -897,6 +898,35 @@ function isQuotaExceeded() {
 }
 
 // ════════════════════════════════════════════════════
+//  🕐 TOPBAR CLOCK (Taiwan Time UTC+8)
+// ════════════════════════════════════════════════════
+const WEEKDAYS = ['日','一','二','三','四','五','六'];
+
+function updateClock() {
+  const el = document.getElementById('topbar-clock');
+  if (!el) return;
+  const now = new Date(Date.now() + 8 * 60 * 60 * 1000); // UTC+8
+  const Y = now.getUTCFullYear();
+  const M = String(now.getUTCMonth() + 1).padStart(2, '0');
+  const D = String(now.getUTCDate()).padStart(2, '0');
+  const wd = WEEKDAYS[now.getUTCDay()];
+  const h = String(now.getUTCHours()).padStart(2, '0');
+  const m = String(now.getUTCMinutes()).padStart(2, '0');
+  const s = String(now.getUTCSeconds()).padStart(2, '0');
+  el.innerHTML = `<span style="color:var(--text);font-weight:600">${Y}/${M}/${D}</span> <span style="color:var(--accent);font-size:0.75rem">(${wd})</span><br><span style="color:var(--text);font-weight:700;font-size:0.9rem;letter-spacing:1px">${h}:${m}:${s}</span>`;
+}
+
+function startClock() {
+  updateClock();
+  // 對齊整秒再開始
+  const msToNext = 1000 - (Date.now() % 1000);
+  setTimeout(() => {
+    updateClock();
+    setInterval(updateClock, 1000);
+  }, msToNext);
+}
+
+// ════════════════════════════════════════════════════
 //  🔊 TEXT-TO-SPEECH: 檔案已送達
 // ════════════════════════════════════════════════════
 function speakFileReceived() {
@@ -1008,22 +1038,58 @@ async function checkAndAutoClear() {
 
 async function clearAllData(dateStr) {
   try {
-    // 清空大廳訊息 + typing
+    toast('🌙 凌晨重置中，請稍候…', 3000);
+
+    // 1. 清大廳訊息 + typing
     await set(dbRef(db, 'global/messages'), null);
     await set(dbRef(db, 'global/typing'), null);
-    // 清空所有私訊
+
+    // 2. 清所有私訊
     await set(dbRef(db, 'dms'), null);
-    // 記錄清空日期
+
+    // 3. 清在線名單（踢掉所有人，各自重新上線會重新寫入）
+    await set(dbRef(db, 'presence'), null);
+
+    // 4. 重置本月 Storage quota 計數
+    await set(dbRef(db, 'quota'), null);
+
+    // 5. 刪除 Storage 所有檔案（遞迴）
+    try {
+      await deleteStorageFolder(stRef(storage, 'dms'));
+    } catch(e) {
+      console.warn('Storage delete skipped (may be empty):', e.message);
+    }
+
+    // 6. 記錄清空日期
     await set(dbRef(db, 'meta/lastClearDate'), dateStr);
-    // 清空在線列表（讓大家重新登入）
-    toast('🌙 聊天室已於凌晨重置，記錄已清空', 5000);
-    // 清本地 DM conv list
+
+    // 7. 清本地記錄
     localStorage.removeItem('dmConvs_v2');
     renderDMConvList();
-    // 清畫面上的訊息
+
+    // 8. 清畫面
     document.getElementById('global-messages').innerHTML = '';
     document.getElementById('dm-messages').innerHTML = '';
-  } catch(e) { console.error('Auto clear failed:', e); }
+
+    toast('✅ 聊天室已於凌晨 1:00 重置完畢', 6000);
+
+    // 9. 2 秒後重新寫入自己的 presence（因為被清掉了）
+    setTimeout(() => setupPresence(), 2000);
+
+  } catch(e) {
+    console.error('Auto clear failed:', e);
+    toast('⚠️ 重置時發生錯誤：' + e.message, 4000);
+  }
+}
+
+// 遞迴刪除 Storage 資料夾內所有檔案
+async function deleteStorageFolder(folderRef) {
+  const res = await listAll(folderRef);
+  // 刪當前層所有檔案
+  const fileDeletes = res.items.map(item => deleteObject(item));
+  // 遞迴刪子資料夾
+  const folderDeletes = res.prefixes.map(prefix => deleteStorageFolder(prefix));
+  await Promise.all([...fileDeletes, ...folderDeletes]);
 }
 
 // 每分鐘檢查一次
@@ -1379,6 +1445,7 @@ function enterChat() {
   document.getElementById('my-name-display').textContent = myNick;
 
   loadQuota();
+  startClock();
   setupNotifications();
   setupEmojiButtons();
   renderDMConvList();
