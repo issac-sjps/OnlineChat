@@ -372,6 +372,25 @@ body {
   border-radius: 99px; transition: width 0.2s;
 }
 
+
+/* ── NOTIFICATION BELL ── */
+.notif-dot {
+  position: absolute; top: 2px; right: 2px;
+  width: 8px; height: 8px;
+  background: var(--danger); border-radius: 50%;
+  border: 2px solid var(--bg2);
+  display: none;
+}
+.notif-dot.show { display: block; }
+#notif-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 1.1rem; position: relative;
+  padding: 4px 8px; border-radius: 6px;
+  transition: background 0.15s;
+}
+#notif-btn:hover { background: rgba(255,255,255,0.06); }
+#notif-btn[data-blocked="true"] { opacity: 0.4; cursor: not-allowed; }
+
 /* ── NOTIFICATION TOAST ── */
 #toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(10px);
@@ -464,7 +483,10 @@ body {
         <span></span><span></span><span></span>
       </button>
       <div class="chat-title"># 大廳</div>
-      <div class="online-count"><span id="topbar-count">0</span> 人在線</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <button id="notif-btn" title="開啟通知">🔔<div class="notif-dot" id="notif-dot"></div></button>
+        <div class="online-count"><span id="topbar-count">0</span> 人在線</div>
+      </div>
     </div>
     <div class="messages" id="global-messages"></div>
     <div class="typing-indicator" id="global-typing"></div>
@@ -537,7 +559,7 @@ const firebaseConfig = {
 const MAX_GLOBAL_MSGS  = 100;    // 大廳保留幾則訊息
 const MAX_FILE_MB      = 20;     // 單檔最大 MB
 const STORAGE_QUOTA_GB = 5;      // Firebase 免費方案 Storage 總額度
-const QUOTA_LOCK_PCT    = 90;     // 🔒 達到幾 % 就鎖住上傳
+const QUOTA_LOCK_PCT    = 50;     // 🔒 達到幾 % 就鎖住上傳
 
 // ════════════════════════════════════════════════════
 //  初始化 Firebase
@@ -701,10 +723,88 @@ function enterChat() {
   document.getElementById('my-name-display').textContent = myNick;
 
   loadQuota();
+  setupNotifications();
   setupPresence();
   listenGlobal();
   listenUsers();
   setupGlobalInput();
+}
+
+// ════════════════════════════════════════════════════
+//  🔔 NOTIFICATIONS
+// ════════════════════════════════════════════════════
+let notifEnabled = false;
+let notifBlocked = false;
+
+// 用 AudioContext 合成一個簡單的 beep，不需要音訊檔案
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.25);
+  } catch(e) {}
+}
+
+function sendNotif(title, body) {
+  if (!notifEnabled) return;
+  // 如果視窗有 focus 就不跳通知，只響聲
+  if (document.hasFocus()) { playBeep(); return; }
+  playBeep();
+  try {
+    const n = new Notification(title, {
+      body,
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%230d1320"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="18">💬</text></svg>',
+      tag: 'chatroom-msg',
+      renotify: true
+    });
+    n.onclick = () => { window.focus(); n.close(); };
+    setTimeout(() => n.close(), 4000);
+  } catch(e) {}
+}
+
+function setupNotifications() {
+  const btn = document.getElementById('notif-btn');
+  // 檢查是否已被封鎖
+  if (Notification.permission === 'denied') {
+    notifBlocked = true;
+    btn.setAttribute('data-blocked', 'true');
+    btn.title = '通知已被封鎖，請在瀏覽器設定中允許';
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    notifEnabled = true;
+    btn.textContent = '';
+    btn.innerHTML = '🔔<div class="notif-dot" id="notif-dot"></div>';
+    btn.title = '通知已開啟（點擊關閉）';
+  }
+  btn.addEventListener('click', async () => {
+    if (notifBlocked) return;
+    if (!notifEnabled) {
+      const perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        notifEnabled = true;
+        btn.title = '通知已開啟（點擊關閉）';
+        toast('✅ 通知已開啟！');
+      } else if (perm === 'denied') {
+        notifBlocked = true;
+        btn.setAttribute('data-blocked', 'true');
+        btn.title = '通知已被封鎖，請在瀏覽器設定中允許';
+        toast('❌ 通知被封鎖，請在瀏覽器設定允許');
+      }
+    } else {
+      notifEnabled = false;
+      btn.title = '點擊開啟通知';
+      toast('🔕 通知已關閉');
+    }
+  });
 }
 
 // ════════════════════════════════════════════════════
@@ -777,6 +877,8 @@ function renderGlobalMsg(msg, container) {
     <div class="msg-bubble">${escapeHtml(msg.text)}</div>
   `;
   container.appendChild(div);
+  // 通知
+  if (!isSelf) sendNotif('💬 大廳', `${escapeHtml(msg.nick)}：${String(msg.text).slice(0,50)}`);
 }
 
 function setupGlobalInput() {
@@ -878,6 +980,11 @@ function renderDMMsg(msg, container) {
       <div class="msg-bubble">${escapeHtml(msg.text)}</div>`;
   }
   container.appendChild(div);
+  // 通知
+  if (!isSelf) {
+    const notifBody = msg.type === 'file' ? `傳送了檔案：${msg.fileName}` : String(msg.text).slice(0,50);
+    sendNotif(`📩 私訊：${dmNick || ''}`, notifBody);
+  }
 
   if (!isSelf && (!document.getElementById('panel-dm').classList.contains('open') || dmUid !== msg.uid)) {
     unreadDM[msg.uid] = (unreadDM[msg.uid] || 0) + 1;
