@@ -231,6 +231,11 @@ body {
   font-weight: 700; font-size: 0.8rem;
   flex-shrink: 0;
   align-self: flex-end;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.msg-avatar:hover {
+  transform: scale(1.12);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.2);
 }
 .msg-content { display: flex; flex-direction: column; gap: 3px; }
 .msg-row.self .msg-content { align-items: flex-end; }
@@ -400,6 +405,74 @@ body {
 }
 
 
+
+/* ── EMOJI PICKER ── */
+.emoji-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 1.15rem; padding: 5px 7px;
+  border-radius: 7px; color: var(--muted);
+  transition: background 0.15s, transform 0.1s;
+  flex-shrink: 0; line-height: 1;
+}
+.emoji-btn:hover { background: rgba(255,255,255,0.07); transform: scale(1.15); }
+
+.emoji-panel {
+  position: absolute; bottom: calc(100% + 8px);
+  left: 0; right: 0;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  z-index: 80;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: 280px;
+}
+.emoji-panel.open { display: flex; }
+
+.emoji-tabs {
+  display: flex; gap: 2px;
+  padding: 8px 10px 4px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto; flex-shrink: 0;
+}
+.emoji-tabs::-webkit-scrollbar { height: 3px; }
+.emoji-tab {
+  background: none; border: none; cursor: pointer;
+  font-size: 0.72rem; padding: 4px 10px;
+  border-radius: 6px; color: var(--muted);
+  white-space: nowrap; font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+.emoji-tab:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+.emoji-tab.active { background: rgba(34,211,238,0.12); color: var(--accent); }
+
+.emoji-search {
+  margin: 8px 10px 4px;
+  padding: 6px 10px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 7px; color: var(--text);
+  font-size: 0.82rem; font-family: inherit;
+  outline: none; flex-shrink: 0;
+}
+.emoji-search:focus { border-color: var(--accent); }
+
+.emoji-grid {
+  display: flex; flex-wrap: wrap;
+  padding: 6px 8px 10px;
+  gap: 2px; overflow-y: auto; flex: 1;
+}
+.emoji-item {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; border-radius: 7px;
+  cursor: pointer; transition: background 0.1s, transform 0.1s;
+  user-select: none;
+}
+.emoji-item:hover { background: rgba(255,255,255,0.08); transform: scale(1.2); }
+.emoji-item.kaomoji { font-size: 0.72rem; width: auto; padding: 4px 8px; }
+
 /* ── NOTIFICATION BELL ── */
 .notif-dot {
   position: absolute; top: 2px; right: 2px;
@@ -522,7 +595,9 @@ body {
     </div>
     <div class="messages" id="global-messages"></div>
     <div class="typing-indicator" id="global-typing"></div>
-    <div class="chat-input-bar">
+    <div class="chat-input-bar" style="position:relative">
+      <div id="emoji-panel-global" class="emoji-panel"></div>
+      <button class="emoji-btn" id="emoji-btn-global" title="表情符號">😊</button>
       <textarea class="chat-input" id="global-input" placeholder="輸入訊息…" rows="1"></textarea>
       <button class="btn-send" id="global-send">送出</button>
     </div>
@@ -544,7 +619,9 @@ body {
       <div id="upload-progress-bar" style="display:none">
         <div class="upload-bar"><div class="upload-fill" id="upload-fill" style="width:0%"></div></div>
       </div>
-      <div class="dm-msg-row">
+      <div class="dm-msg-row" style="position:relative">
+        <div id="emoji-panel-dm" class="emoji-panel"></div>
+        <button class="emoji-btn" id="emoji-btn-dm" title="表情符號">😊</button>
         <input class="dm-input" id="dm-input" type="text" placeholder="私訊…" autocomplete="off">
         <button class="btn-dm-send" id="dm-send">送</button>
       </div>
@@ -729,6 +806,135 @@ function isQuotaExceeded() {
 }
 
 // ════════════════════════════════════════════════════
+//  😊 EMOJI / 顏文字 PICKER
+// ════════════════════════════════════════════════════
+const EMOJI_DATA = {
+  '笑臉': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','😎','🥳','🤗','😺','😸','😻','😹'],
+  '心情': ['😐','😑','😶','🤔','🤭','🤫','🤥','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤯','🥴','🤢','🤮','🤧','🥵','🥶','😰','😱','😳','🤬','😤','😠','😡','💀','👻','😈','👿'],
+  '愛心': ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','♥️','❤️‍🔥','❤️‍🩹'],
+  '手勢': ['👍','👎','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👋','🤚','🖐️','✋','🖖','💪','🦾','🤜','🤛','👊','✊','🙌','👐','🤲','🙏','🤝','💅'],
+  '動物': ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🐛','🦋','🐌','🐞','🐜'],
+  '食物': ['🍎','🍊','🍋','🍇','🍓','🫐','🍈','🍑','🥭','🍍','🥝','🍅','🫒','🥥','🥑','🍆','🥕','🌽','🍄','🧄','🧅','🥔','🍞','🥐','🥨','🧀','🍳','🥞','🧇','🥓','🍔','🍟','🍕','🌮','🌯','🍜','🍱','🍣','🍦','🍰','🎂','🍫','🍬','🍭','☕','🧋','🧃','🍺','🥂'],
+  '活動': ['⚽','🏀','🏈','⚾','🎾','🏐','🎱','🏓','🎮','🕹️','🎲','🎯','🎳','🎰','🧩','🎸','🎹','🎺','🎻','🥁','🎤','🎧','📱','💻','⌨️','🖥️','📷','📸','🔭','🔬','💡','🔑','🪄','🎁','🎈','🎉','🎊','🎀','🏆','🥇'],
+  '天氣': ['☀️','🌤️','⛅','🌥️','☁️','🌦️','🌧️','⛈️','🌩️','🌨️','❄️','☃️','⛄','🌬️','💨','🌪️','🌈','☔','⚡','🔥','💧','🌊','🌙','⭐','🌟','💫','✨','🌸','🌺','🌻','🍀','🌿'],
+  '顏文字': ['( •̀ ω •́ )✧','(≧▽≦)','(｡◕‿◕｡)','(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧','♪(´▽｀)','( ˘ ³˘)♥','(づ￣ ³￣)づ','ヽ(✿ﾟ▽ﾟ)ノ','(￣y▽￣)╭ Ohohoho','╰(*°▽°*)╯','(｀・ω・´)','(；´д｀)ゞ','(╯°□°）╯︵ ┻━┻','┬─┬ノ( º _ ºノ)','(ง •̀_•́)ง','( ͡° ͜ʖ ͡°)','¯\_(ツ)_/¯','ಠ_ಠ','(•̀ᴗ•́)و','(⌐■_■)','凸(＞皿＜)凸','(●´ω｀●)','o((*^▽^*))o','(๑•̀ㅂ•́)و✧','꒰˘̩̩̩⌣˘̩̩̩๑꒱','(〃∀〃)','(*´∀`)~♥','(ง︡'-'︠)ง','(╥_╥)','இдஇ','(T_T)','QAQ','OTZ','_(:3 」∠)_'],
+};
+
+let activeEmojiTarget = null;  // 'global' or 'dm'
+let activeEmojiTab = '笑臉';
+
+function buildEmojiPanel(panelId, targetInputId) {
+  const panel = document.getElementById(panelId);
+  panel.innerHTML = '';
+
+  // Search bar
+  const search = document.createElement('input');
+  search.className = 'emoji-search';
+  search.placeholder = '搜尋…';
+  panel.appendChild(search);
+
+  // Tabs
+  const tabs = document.createElement('div');
+  tabs.className = 'emoji-tabs';
+  Object.keys(EMOJI_DATA).forEach(cat => {
+    const tab = document.createElement('button');
+    tab.className = 'emoji-tab' + (cat === activeEmojiTab ? ' active' : '');
+    tab.textContent = cat;
+    tab.addEventListener('click', () => {
+      tabs.querySelectorAll('.emoji-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      activeEmojiTab = cat;
+      renderGrid(cat);
+    });
+    tabs.appendChild(tab);
+  });
+  panel.appendChild(tabs);
+
+  // Grid
+  const grid = document.createElement('div');
+  grid.className = 'emoji-grid';
+  panel.appendChild(grid);
+
+  function renderGrid(cat, filter = '') {
+    grid.innerHTML = '';
+    const items = filter
+      ? Object.values(EMOJI_DATA).flat().filter(e => e.includes(filter))
+      : EMOJI_DATA[cat] || [];
+    items.forEach(em => {
+      const el = document.createElement('div');
+      const isKao = em.length > 2 && !em.match(/\p{Emoji}/u);
+      el.className = 'emoji-item' + (isKao ? ' kaomoji' : '');
+      el.textContent = em;
+      el.title = em;
+      el.addEventListener('click', () => {
+        insertEmoji(targetInputId, em);
+      });
+      grid.appendChild(el);
+    });
+  }
+
+  renderGrid(activeEmojiTab);
+
+  search.addEventListener('input', () => {
+    const q = search.value.trim();
+    if (q) {
+      renderGrid(null, q);
+    } else {
+      renderGrid(activeEmojiTab);
+    }
+  });
+}
+
+function insertEmoji(targetId, emoji) {
+  const input = document.getElementById(targetId);
+  if (!input) return;
+  const start = input.selectionStart ?? input.value.length;
+  const end = input.selectionEnd ?? input.value.length;
+  input.value = input.value.slice(0, start) + emoji + input.value.slice(end);
+  const pos = start + emoji.length;
+  input.setSelectionRange(pos, pos);
+  input.focus();
+  // trigger autoResize for textarea
+  if (input.tagName === 'TEXTAREA') autoResize(input);
+}
+
+function toggleEmojiPanel(panelId, targetId) {
+  // close any other open panel first
+  document.querySelectorAll('.emoji-panel').forEach(p => {
+    if (p.id !== panelId) p.classList.remove('open');
+  });
+  const panel = document.getElementById(panelId);
+  const isOpen = panel.classList.contains('open');
+  if (!isOpen) {
+    buildEmojiPanel(panelId, targetId);
+    panel.classList.add('open');
+    // focus search
+    setTimeout(() => panel.querySelector('.emoji-search')?.focus(), 50);
+  } else {
+    panel.classList.remove('open');
+  }
+}
+
+// Close panels when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('.emoji-btn') && !e.target.closest('.emoji-panel')) {
+    document.querySelectorAll('.emoji-panel').forEach(p => p.classList.remove('open'));
+  }
+});
+
+// Wire up buttons (after DOM ready — called from enterChat)
+function setupEmojiButtons() {
+  document.getElementById('emoji-btn-global').addEventListener('click', e => {
+    e.stopPropagation();
+    toggleEmojiPanel('emoji-panel-global', 'global-input');
+  });
+  document.getElementById('emoji-btn-dm').addEventListener('click', e => {
+    e.stopPropagation();
+    toggleEmojiPanel('emoji-panel-dm', 'dm-input');
+  });
+}
+
+// ════════════════════════════════════════════════════
 //  🎨 COLOR PICKER
 // ════════════════════════════════════════════════════
 function buildColorPicker(containerId, selectedColor, onSelect) {
@@ -902,6 +1108,7 @@ function enterChat() {
 
   loadQuota();
   setupNotifications();
+  setupEmojiButtons();
   setupPresence();
   listenGlobal();
   listenUsers();
@@ -914,37 +1121,57 @@ function enterChat() {
 let notifEnabled = false;
 let notifBlocked = false;
 
-// 用 AudioContext 合成一個簡單的 beep，不需要音訊檔案
-function playBeep() {
+// ── 音效：用 Web Audio API 合成，不需要音訊檔案 ──
+function playTone(freq, duration, type = 'sine', volume = 0.3) {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 880;
-    osc.type = 'sine';
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value = freq;
+    osc.type = type;
+    gain.gain.setValueAtTime(volume, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
     osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.25);
+    osc.stop(ctx.currentTime + duration);
   } catch(e) {}
 }
 
-function sendNotif(title, body) {
+// 大廳：輕柔單音
+function playGlobalBeep() {
+  playTone(660, 0.18, 'sine', 0.2);
+}
+
+// 私訊：雙音急促，更顯眼
+function playDMBeep() {
+  playTone(880, 0.12, 'sine', 0.35);
+  setTimeout(() => playTone(1100, 0.15, 'sine', 0.35), 130);
+}
+
+// 通知圖示 SVG (base64-safe)
+const NOTIF_ICON = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#0d1320"/><text x="50%" y="56%" dominant-baseline="middle" text-anchor="middle" font-size="20">💬</text></svg>');
+
+function sendNotif(title, body, isDM = false) {
+  // 不管有沒有開通知，私訊都要響聲
+  if (isDM) {
+    playDMBeep();
+  } else {
+    if (!notifEnabled) return;
+    playGlobalBeep();
+  }
+
   if (!notifEnabled) return;
-  // 如果視窗有 focus 就不跳通知，只響聲
-  if (document.hasFocus()) { playBeep(); return; }
-  playBeep();
+  if (document.hasFocus()) return;   // 視窗在前景只響聲，不跳泡泡
+
   try {
     const n = new Notification(title, {
       body,
-      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="%230d1320"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-size="18">💬</text></svg>',
-      tag: 'chatroom-msg',
+      icon: NOTIF_ICON,
+      tag: isDM ? 'chatroom-dm' : 'chatroom-global',  // 私訊/大廳分開 tag
       renotify: true
     });
     n.onclick = () => { window.focus(); n.close(); };
-    setTimeout(() => n.close(), 4000);
+    setTimeout(() => n.close(), 5000);
   } catch(e) {}
 }
 
@@ -1053,20 +1280,56 @@ function renderGlobalMsg(msg, container) {
   const isSelf = msg.uid === myUid;
   const div = document.createElement('div');
   div.className = 'msg-row ' + (isSelf ? 'self' : 'other');
-  const avatarHtml = isSelf ? '' : `<div class="msg-avatar" style="background:${avatarColor(msg.uid)}">${initials(msg.nick)}</div>`;
-  const nameHtml = isSelf ? '' : `<span class="msg-author" style="color:${avatarColor(msg.uid)}">${escapeHtml(msg.nick)}</span>`;
-  div.innerHTML = `
-    ${avatarHtml}
-    <div class="msg-content">
-      <div class="msg-meta">
-        ${nameHtml}
-        <span class="msg-time">${formatTime(msg.ts)}</span>
-      </div>
-      <div class="msg-bubble">${escapeHtml(msg.text)}</div>
-    </div>
-  `;
+
+  if (!isSelf) {
+    // 頭像：用 DOM 建立才能綁 click 事件
+    const av = document.createElement('div');
+    av.className = 'msg-avatar';
+    av.style.background = avatarColor(msg.uid);
+    av.style.cursor = 'pointer';
+    av.title = `私訊 ${msg.nick}`;
+    av.textContent = initials(msg.nick);
+    av.addEventListener('click', () => openDM(msg.uid, msg.nick));
+    div.appendChild(av);
+  }
+
+  // 訊息內容
+  const content = document.createElement('div');
+  content.className = 'msg-content';
+
+  if (!isSelf) {
+    const meta = document.createElement('div');
+    meta.className = 'msg-meta';
+    const author = document.createElement('span');
+    author.className = 'msg-author';
+    author.style.color = avatarColor(msg.uid);
+    author.style.cursor = 'pointer';
+    author.title = `私訊 ${msg.nick}`;
+    author.textContent = msg.nick;
+    author.addEventListener('click', () => openDM(msg.uid, msg.nick));
+    const time = document.createElement('span');
+    time.className = 'msg-time';
+    time.textContent = formatTime(msg.ts);
+    meta.appendChild(author); meta.appendChild(time);
+    content.appendChild(meta);
+  } else {
+    const meta = document.createElement('div');
+    meta.className = 'msg-meta';
+    const time = document.createElement('span');
+    time.className = 'msg-time';
+    time.textContent = formatTime(msg.ts);
+    meta.appendChild(time);
+    content.appendChild(meta);
+  }
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.textContent = msg.text;
+  content.appendChild(bubble);
+  div.appendChild(content);
   container.appendChild(div);
-  if (!isSelf) sendNotif('💬 大廳', `${escapeHtml(msg.nick)}：${String(msg.text).slice(0,50)}`);
+
+  if (!isSelf) sendNotif('💬 大廳', `${msg.nick}：${String(msg.text).slice(0,50)}`);
 }
 
 function setupGlobalInput() {
@@ -1174,7 +1437,7 @@ function renderDMMsg(msg, container) {
   // 通知
   if (!isSelf) {
     const notifBody = msg.type === 'file' ? `傳送了檔案：${msg.fileName}` : String(msg.text).slice(0,50);
-    sendNotif(`📩 私訊：${dmNick || ''}`, notifBody);
+    sendNotif(`📩 私訊：${dmNick || ''}`, notifBody, true);  // isDM=true → 雙音 + 獨立通知
   }
 
   if (!isSelf && (!document.getElementById('panel-dm').classList.contains('open') || dmUid !== msg.uid)) {
