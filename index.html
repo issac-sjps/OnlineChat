@@ -637,13 +637,27 @@ body {
     </div>
     <div class="panel-section">在線用戶 (<span id="online-count">0</span>)</div>
     <div class="user-list" id="user-list"></div>
-    <!-- Quota bar -->
-    <div style="padding:10px 14px 6px; border-top:1px solid var(--border)">
-      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
-        <span id="quota-label" style="font-size:0.7rem;color:var(--muted)">Storage 本月：讀取中…</span>
+    <!-- Quota bars -->
+    <div style="padding:10px 14px 8px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:7px">
+      <!-- 上傳 -->
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+          <span style="font-size:0.68rem;color:var(--muted)">⬆ 今日上傳</span>
+          <span id="upload-label" style="font-size:0.68rem;color:var(--muted)">讀取中…</span>
+        </div>
+        <div style="height:4px;background:var(--border);border-radius:99px;overflow:hidden">
+          <div id="upload-bar-fill" style="height:100%;width:0%;border-radius:99px;transition:width 0.4s,background 0.3s"></div>
+        </div>
       </div>
-      <div style="height:4px;background:var(--border);border-radius:99px;overflow:hidden">
-        <div id="quota-bar-fill" style="height:100%;width:0%;background:var(--accent);border-radius:99px;transition:width 0.4s,background 0.3s"></div>
+      <!-- 下載 -->
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+          <span style="font-size:0.68rem;color:var(--muted)">⬇ 今日下載</span>
+          <span id="download-label" style="font-size:0.68rem;color:var(--muted)">0 MB / 1 GB</span>
+        </div>
+        <div style="height:4px;background:var(--border);border-radius:99px;overflow:hidden">
+          <div id="download-bar-fill" style="height:100%;width:0%;border-radius:99px;transition:width 0.4s,background 0.3s"></div>
+        </div>
       </div>
     </div>
 
@@ -775,8 +789,8 @@ const firebaseConfig = {
 // ════════════════════════════════════════════════════
 const MAX_GLOBAL_MSGS  = 100;    // 大廳保留幾則訊息
 const MAX_FILE_MB      = 20;     // 單檔最大 MB
-const STORAGE_QUOTA_GB = 5;      // Firebase 免費方案 Storage 總額度
-const QUOTA_LOCK_PCT    = 50;     // 🔒 達到幾 % 就鎖住上傳
+const UPLOAD_LIMIT_GB   = 1.0;   // 🔒 每日上傳上限 GB（超過鎖住）
+const DOWNLOAD_LIMIT_GB = 1.0;   // 📊 每日下載上限 GB（Firebase 免費額度）
 
 // ════════════════════════════════════════════════════
 //  初始化 Firebase
@@ -850,51 +864,98 @@ function monthKey() {
 }
 
 // ════════════════════════════════════════════════════
-//  📊 QUOTA — 每月上傳量追蹤
-//  記錄在 DB /quota/{monthKey}/bytesUsed
-//  累積上傳達到 QUOTA_LOCK_PCT% 就鎖住，每月自動重置
+//  📊 QUOTA — 今日上傳 & 下載量追蹤
+//  DB 路徑：quota/{dateKey}/upload  /  quota/{dateKey}/download
+//  每天凌晨重置（配合清空機制）
 // ════════════════════════════════════════════════════
-const QUOTA_TOTAL_BYTES = STORAGE_QUOTA_GB * 1024 * 1024 * 1024;
-const QUOTA_LIMIT_BYTES = QUOTA_TOTAL_BYTES * (QUOTA_LOCK_PCT / 100);
-let currentMonthBytes = 0;
+const UPLOAD_LIMIT_BYTES   = UPLOAD_LIMIT_GB   * 1024 * 1024 * 1024;
+const DOWNLOAD_LIMIT_BYTES = DOWNLOAD_LIMIT_GB * 1024 * 1024 * 1024;
+
+let todayUploadBytes   = 0;
+let todayDownloadBytes = 0;
+
+// 台灣日期字串 YYYY-MM-DD（用於每日重置）
+function dateKey() {
+  const now = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  return now.toISOString().slice(0, 10);
+}
+
+function fmtBytes(b) {
+  if (b >= 1024 * 1024 * 1024) return (b / (1024**3)).toFixed(2) + ' GB';
+  if (b >= 1024 * 1024)        return (b / (1024**2)).toFixed(1) + ' MB';
+  if (b >= 1024)               return (b / 1024).toFixed(0) + ' KB';
+  return b + ' B';
+}
+
+function barColor(pct) {
+  return pct >= 90 ? '#f87171' : pct >= 60 ? '#fbbf24' : '#22d3ee';
+}
 
 async function loadQuota() {
-  const snap = await get(dbRef(db, `quota/${monthKey()}/bytesUsed`));
-  currentMonthBytes = snap.exists() ? snap.val() : 0;
+  const dk = dateKey();
+  const [upSnap, dlSnap] = await Promise.all([
+    get(dbRef(db, `quota/${dk}/upload`)),
+    get(dbRef(db, `quota/${dk}/download`))
+  ]);
+  todayUploadBytes   = upSnap.exists()  ? upSnap.val()  : 0;
+  todayDownloadBytes = dlSnap.exists()  ? dlSnap.val()  : 0;
+  updateQuotaUI();
+
+  // 即時監聽別人上傳/下載也會更新 UI
+  onValue(dbRef(db, `quota/${dk}/upload`),   s => { todayUploadBytes   = s.exists() ? s.val() : 0; updateQuotaUI(); });
+  onValue(dbRef(db, `quota/${dk}/download`), s => { todayDownloadBytes = s.exists() ? s.val() : 0; updateQuotaUI(); });
+}
+
+async function addUpload(bytes) {
+  todayUploadBytes += bytes;
+  await set(dbRef(db, `quota/${dateKey()}/upload`), todayUploadBytes);
   updateQuotaUI();
 }
 
-async function addQuota(bytes) {
-  currentMonthBytes += bytes;
-  await set(dbRef(db, `quota/${monthKey()}/bytesUsed`), currentMonthBytes);
+async function addDownload(bytes) {
+  todayDownloadBytes += bytes;
+  await set(dbRef(db, `quota/${dateKey()}/download`), todayDownloadBytes);
   updateQuotaUI();
 }
 
 function updateQuotaUI() {
-  const pct = Math.min((currentMonthBytes / QUOTA_LIMIT_BYTES) * 100, 100);
-  const usedGB = (currentMonthBytes / (1024**3)).toFixed(2);
-  const el = document.getElementById('quota-bar-fill');
-  const label = document.getElementById('quota-label');
-  if (el) el.style.width = pct + '%';
-  if (el) el.style.background = pct >= 90 ? '#f87171' : pct >= 60 ? '#fbbf24' : '#22d3ee';
-  const totalGB = STORAGE_QUOTA_GB;
-  const lockGB = (QUOTA_LOCK_PCT / 100 * totalGB).toFixed(1);
-  if (label) label.textContent = `Storage 本月：${usedGB} GB／上限 ${lockGB} GB（免費 ${totalGB}GB 的 ${QUOTA_LOCK_PCT}%）`;
+  const upPct = Math.min((todayUploadBytes   / UPLOAD_LIMIT_BYTES)   * 100, 100);
+  const dlPct = Math.min((todayDownloadBytes / DOWNLOAD_LIMIT_BYTES) * 100, 100);
 
-  const locked = currentMonthBytes >= QUOTA_LIMIT_BYTES;
-  const fileBtn = document.querySelector('.btn-file');
+  const upFill = document.getElementById('upload-bar-fill');
+  const dlFill = document.getElementById('download-bar-fill');
+  const upLabel = document.getElementById('upload-label');
+  const dlLabel = document.getElementById('download-label');
+
+  if (upFill) { upFill.style.width = upPct + '%'; upFill.style.background = barColor(upPct); }
+  if (dlFill) { dlFill.style.width = dlPct + '%'; dlFill.style.background = barColor(dlPct); }
+  if (upLabel) upLabel.textContent = `${fmtBytes(todayUploadBytes)} / ${UPLOAD_LIMIT_GB} GB`;
+  if (dlLabel) dlLabel.textContent = `${fmtBytes(todayDownloadBytes)} / ${DOWNLOAD_LIMIT_GB} GB`;
+
+  // 上傳鎖定
+  const uploadLocked = todayUploadBytes >= UPLOAD_LIMIT_BYTES;
+  const fileBtn   = document.querySelector('.btn-file');
   const fileInput = document.getElementById('dm-file-input');
   if (fileBtn) {
-    fileBtn.disabled = locked;
-    fileBtn.title = locked ? '本月上傳已達上限，下個月重置' : '';
-    fileBtn.style.opacity = locked ? '0.4' : '';
-    fileBtn.style.cursor = locked ? 'not-allowed' : '';
+    fileBtn.disabled   = uploadLocked;
+    fileBtn.title      = uploadLocked ? '今日上傳已達 1GB 上限，明天重置' : '';
+    fileBtn.style.opacity = uploadLocked ? '0.4' : '';
+    fileBtn.style.cursor  = uploadLocked ? 'not-allowed' : '';
   }
-  if (fileInput) fileInput.disabled = locked;
+  if (fileInput) fileInput.disabled = uploadLocked;
 }
 
 function isQuotaExceeded() {
-  return currentMonthBytes >= QUOTA_LIMIT_BYTES;
+  return todayUploadBytes >= UPLOAD_LIMIT_BYTES;
+}
+
+
+// 下載時追蹤用量
+function trackDownloadAndOpen(url, fileSize) {
+  window.open(url, '_blank', 'noopener');
+  if (fileSize > 0) {
+    addDownload(fileSize);
+  }
 }
 
 // ════════════════════════════════════════════════════
@@ -1765,7 +1826,7 @@ function renderDMMsg(msg, container) {
         <div class="file-icon">📄</div>
         <div class="file-info">
           <div class="file-name">${escapeHtml(msg.fileName)}</div>
-          <a class="file-dl" href="${msg.url}" target="_blank" rel="noopener">下載 ↓</a>
+          <span class="file-dl" style="cursor:pointer" onclick="trackDownloadAndOpen('${msg.url}', ${msg.fileSize || 0})">下載 ↓</span>
         </div>
       </div>`;
   } else {
@@ -1875,12 +1936,13 @@ async function uploadAndSend(file) {
     });
 
     // ✅ 上傳成功：記錄用量
-    await addQuota(file.size);
+    await addUpload(file.size);
 
     const url = await getDownloadURL(fileRef);
     await push(dbRef(db, 'dms/' + dmRoomId + '/messages'), {
       uid: myUid, nick: myNick,
       type: 'file', fileName: file.name, url,
+      fileSize: file.size,
       ts: serverTimestamp()
     });
     toast('✅ 檔案傳送成功！');
