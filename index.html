@@ -577,24 +577,97 @@ body {
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 /* ── MOBILE OVERLAY ── */
-@media (max-width: 768px) {
-  #panel-left {
-    position: fixed; left: 0; top: 0; bottom: 0; z-index: 50;
-    transform: translateX(-100%); transition: transform 0.3s;
-  }
-  #panel-left.mob-open { transform: translateX(0); }
-  #panel-right {
-    position: fixed; right: 0; top: 0; bottom: 0; z-index: 50;
-    transform: translateX(100%); transition: transform 0.3s;
-  }
-  #panel-right.mob-open { transform: translateX(0); }
-  .hamburger { display: flex !important; }
+/* ── MOBILE NAV BAR (bottom tabs) ── */
+#mob-nav {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
+  height: 56px;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  display: none;
+  align-items: center; justify-content: space-around;
 }
+#mob-nav button {
+  flex: 1; height: 100%;
+  background: none; border: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; color: var(--muted); font-size: 0.6rem;
+  font-family: inherit; transition: color 0.15s;
+  position: relative;
+}
+#mob-nav button.active { color: var(--accent); }
+#mob-nav button .nav-icon { font-size: 1.3rem; line-height: 1; }
+#mob-nav button .nav-badge {
+  position: absolute; top: 6px; right: calc(50% - 16px);
+  background: var(--danger); color: #fff;
+  font-size: 0.6rem; font-weight: 700;
+  padding: 1px 5px; border-radius: 99px;
+  display: none;
+}
+#mob-nav button .nav-badge.show { display: block; }
+
+/* ── MOBILE OVERLAY (dim behind panels) ── */
+#mob-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 45;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(2px);
+}
+#mob-overlay.show { display: block; }
+
 .hamburger {
   display: none; flex-direction: column; gap: 4px;
   background: none; border: none; cursor: pointer; padding: 4px;
 }
 .hamburger span { display: block; width: 20px; height: 2px; background: var(--text); border-radius: 2px; }
+
+@media (max-width: 768px) {
+  /* 隱藏桌面版 hamburger，改用底部 nav */
+  .hamburger { display: none !important; }
+  #mob-nav { display: flex; }
+
+  /* 三個面板都收起，用 mob-show 控制 */
+  #panel-left {
+    position: fixed; left: 0; top: 0; bottom: 56px; z-index: 50;
+    width: 80vw; min-width: unset;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+  }
+  #panel-left.mob-show { transform: translateX(0); }
+
+  #panel-right {
+    position: fixed; right: 0; top: 0; bottom: 56px; z-index: 50;
+    width: 90vw; min-width: unset;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: -4px 0 24px rgba(0,0,0,0.5);
+  }
+  #panel-right.mob-show { transform: translateX(0); }
+
+  /* 主聊天區補底部 nav 的高度 */
+  #main-chat { padding-bottom: 56px; }
+
+  /* 時鐘在手機上縮小 */
+  #topbar-clock { display: none; }
+
+  /* 訊息氣泡手機版放大可點 */
+  .msg-bubble { font-size: 0.92rem; }
+  .msg-avatar { width: 30px; height: 30px; min-width: 30px; font-size: 0.72rem; }
+
+  /* input bar 手機版 */
+  .chat-input-bar { padding: 8px 12px; }
+  .btn-send { padding: 0 12px; font-size: 0.8rem; }
+
+  /* DM input */
+  .dm-input-area { padding: 8px 10px; }
+
+  /* emoji panel 在手機上佔更多空間 */
+  .emoji-panel { max-height: 220px; }
+
+  /* 左側面板在手機上不顯示 quota 文字，只顯示 bar */
+  #quota-detail { display: none; }
+}
 
 /* Typing indicator */
 .typing-indicator {
@@ -750,6 +823,27 @@ body {
       <button id="settings-cancel" style="flex:0.5;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;font-family:inherit">取消</button>
     </div>
   </div>
+</div>
+
+<!-- Mobile overlay -->
+<div id="mob-overlay"></div>
+
+<!-- Mobile bottom nav -->
+<div id="mob-nav">
+  <button id="mob-tab-lobby" class="active" onclick="mobTab('lobby')">
+    <div class="nav-icon">💬</div>
+    <span>大廳</span>
+  </button>
+  <button id="mob-tab-users" onclick="mobTab('users')">
+    <div class="nav-icon">👥</div>
+    <span>在線</span>
+    <div class="nav-badge" id="mob-badge-users"></div>
+  </button>
+  <button id="mob-tab-dm" onclick="mobTab('dm')">
+    <div class="nav-icon">📩</div>
+    <span>私訊</span>
+    <div class="nav-badge" id="mob-badge-dm"></div>
+  </button>
 </div>
 
 <!-- Toast -->
@@ -1041,6 +1135,10 @@ function renderDMConvList() {
     list.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:0.8rem;padding:20px">還沒有私訊紀錄</div>';
     return;
   }
+  // 計算總未讀數，更新手機底部 badge
+  const totalUnread = sorted.reduce((sum, [uid, info]) => sum + (uid !== dmUid ? (info.unread || 0) : 0), 0);
+  updateMobDMBadge(totalUnread);
+
   sorted.forEach(([uid, info]) => {
     const item = document.createElement('div');
     item.className = 'dm-conv-item' + (uid === dmUid ? ' active' : '');
@@ -1112,10 +1210,13 @@ async function clearAllData(dateStr) {
     await set(dbRef(db, 'quota'), null);
 
     // 4. 刪除 Storage 所有檔案（遞迴）
+    // ⚠️ 需要在 Firebase Storage 設定 CORS 才能從 GitHub Pages 刪除
+    // 如果出現 CORS 錯誤，檔案會在下次手動清或 Firebase Console 清
     try {
       await deleteStorageFolder(stRef(storage, 'dms'));
     } catch(e) {
-      console.warn('Storage delete skipped (may be empty):', e.message);
+      // CORS or permission error — 靜默略過，不影響其他清空流程
+      console.warn('Storage CORS/delete skipped:', e.message);
     }
 
     // 5. 記錄清空日期 + 寫入 clearSignal 通知所有在線客戶端
@@ -1821,6 +1922,14 @@ function openDM(uid, nick) {
   // Switch panel: hide list, show chat
   document.getElementById('dm-list-panel').classList.add('hide');
   document.getElementById('panel-dm').classList.add('open');
+  // 手機版：確保右側面板顯示
+  if (isMobile()) {
+    document.getElementById('panel-right').classList.add('mob-show');
+    document.getElementById('mob-overlay').classList.add('show');
+    ['lobby','users','dm'].forEach(t => document.getElementById('mob-tab-' + t)?.classList.remove('active'));
+    document.getElementById('mob-tab-dm')?.classList.add('active');
+    mobCurrentTab = 'dm';
+  }
 
   document.getElementById('dm-with-name').textContent = nick;
   document.getElementById('dm-messages').innerHTML = '';
@@ -1992,6 +2101,10 @@ async function uploadAndSend(file) {
 document.getElementById('close-dm').addEventListener('click', () => {
   document.getElementById('panel-dm').classList.remove('open');
   document.getElementById('dm-list-panel').classList.remove('hide');
+  // 手機版：停在右側面板顯示 dm list，不收起
+  if (isMobile()) {
+    document.getElementById('panel-right').classList.add('mob-show');
+  }
   if (dmUnsub) { dmUnsub(); dmUnsub = null; }
   dmUid = null; dmNick = null; dmRoomId = null;
   renderDMConvList();
@@ -1999,11 +2112,71 @@ document.getElementById('close-dm').addEventListener('click', () => {
 });
 
 // ════════════════════════════════════════════════════
+//  📱 MOBILE NAVIGATION
+// ════════════════════════════════════════════════════
+let mobCurrentTab = 'lobby';
+
+function isMobile() { return window.innerWidth <= 768; }
+
+function mobTab(tab) {
+  if (!isMobile()) return;
+  mobCurrentTab = tab;
+
+  const left  = document.getElementById('panel-left');
+  const right = document.getElementById('panel-right');
+  const overlay = document.getElementById('mob-overlay');
+
+  // 全部收起
+  left.classList.remove('mob-show');
+  right.classList.remove('mob-show');
+  overlay.classList.remove('show');
+
+  // 更新 tab active 狀態
+  ['lobby','users','dm'].forEach(t => {
+    document.getElementById('mob-tab-' + t)?.classList.remove('active');
+  });
+  document.getElementById('mob-tab-' + tab)?.classList.add('active');
+
+  if (tab === 'users') {
+    left.classList.add('mob-show');
+    overlay.classList.add('show');
+    document.getElementById('mob-badge-users').classList.remove('show');
+  } else if (tab === 'dm') {
+    right.classList.add('mob-show');
+    overlay.classList.add('show');
+    document.getElementById('mob-badge-dm').classList.remove('show');
+  }
+  // lobby: 兩邊都收起，顯示主聊天
+}
+
+// 點 overlay 收起面板
+document.getElementById('mob-overlay').addEventListener('click', () => {
+  if (!isMobile()) return;
+  mobTab('lobby');
+});
+
+// 有新私訊時顯示底部 tab badge
+function updateMobDMBadge(totalUnread) {
+  if (!isMobile()) return;
+  const badge = document.getElementById('mob-badge-dm');
+  if (!badge) return;
+  if (totalUnread > 0 && mobCurrentTab !== 'dm') {
+    badge.textContent = totalUnread > 9 ? '9+' : totalUnread;
+    badge.classList.add('show');
+  } else {
+    badge.classList.remove('show');
+  }
+}
+
+// ════════════════════════════════════════════════════
 //  HAMBURGER (mobile)
 // ════════════════════════════════════════════════════
-document.getElementById('hamburger').addEventListener('click', () => {
-  document.getElementById('panel-left').classList.toggle('mob-open');
-});
+const hamburgerEl = document.getElementById('hamburger');
+if (hamburgerEl) {
+  hamburgerEl.addEventListener('click', () => {
+    document.getElementById('panel-left').classList.toggle('mob-show');
+  });
+}
 
 </script>
 </body>
