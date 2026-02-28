@@ -298,19 +298,93 @@ body {
 .btn-send:hover { opacity: 0.85; }
 .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
 
+
+/* ── DM CONVERSATION LIST ── */
+.dm-list-header {
+  padding: 0 16px;
+  height: 56px; min-height: 56px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700; font-size: 0.95rem;
+}
+.dm-conv-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 10px; margin: 2px 8px;
+  position: relative;
+}
+.dm-conv-item:hover { background: rgba(255,255,255,0.05); }
+.dm-conv-item.active { background: rgba(34,211,238,0.08); }
+.dm-conv-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.9rem; flex-shrink: 0;
+  position: relative;
+}
+.dm-conv-avatar .unread-ring {
+  position: absolute; inset: -3px;
+  border: 2px solid var(--accent);
+  border-radius: 50%; display: none;
+}
+.dm-conv-avatar .unread-ring.show { display: block; }
+.dm-conv-info { flex: 1; min-width: 0; }
+.dm-conv-name { font-size: 0.85rem; font-weight: 600; }
+.dm-conv-preview {
+  font-size: 0.75rem; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 2px;
+}
+.dm-conv-preview.unread { color: var(--accent); font-weight: 500; }
+.dm-conv-meta {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+}
+.dm-conv-time { font-size: 0.68rem; color: var(--muted); }
+.dm-conv-badge {
+  background: var(--accent); color: #000;
+  font-size: 0.65rem; font-weight: 700;
+  padding: 1px 6px; border-radius: 99px;
+  min-width: 18px; text-align: center; display: none;
+}
+.dm-conv-badge.show { display: block; }
+
+/* 抖動動畫：有新訊息時 */
+@keyframes wiggle {
+  0%,100% { transform: rotate(0); }
+  20% { transform: rotate(-8deg); }
+  40% { transform: rotate(8deg); }
+  60% { transform: rotate(-5deg); }
+  80% { transform: rotate(5deg); }
+}
+.dm-conv-item.new-msg .dm-conv-avatar { animation: wiggle 0.5s ease; }
+
 /* ── DM PANEL ── */
-#panel-dm {
+/* 右側容器：永遠顯示，寬度固定 */
+#panel-right {
   width: var(--dm-w);
   min-width: var(--dm-w);
   background: var(--bg2);
   border-left: 1px solid var(--border);
   display: flex; flex-direction: column;
   overflow: hidden;
-  transform: translateX(100%);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
-#panel-dm.open { transform: translateX(0); }
+
+/* 對話列表（預設顯示） */
+#dm-list-panel {
+  display: flex; flex-direction: column;
+  height: 100%; overflow: hidden;
+}
+#dm-list-panel.hide { display: none; }
+
+/* 聊天視窗（點進去後顯示） */
+#panel-dm {
+  display: none; flex-direction: column;
+  height: 100%; overflow: hidden;
+  position: relative;
+}
+#panel-dm.open { display: flex; }
 
 .dm-topbar {
   padding: 0 16px;
@@ -509,9 +583,11 @@ body {
     transform: translateX(-100%); transition: transform 0.3s;
   }
   #panel-left.mob-open { transform: translateX(0); }
-  #panel-dm {
+  #panel-right {
     position: fixed; right: 0; top: 0; bottom: 0; z-index: 50;
+    transform: translateX(100%); transition: transform 0.3s;
   }
+  #panel-right.mob-open { transform: translateX(0); }
   .hamburger { display: flex !important; }
 }
 .hamburger {
@@ -572,7 +648,7 @@ body {
     </div>
 
     <div class="my-info">
-      <div class="user-avatar" id="my-avatar" style="background:#1e3a5f"></div>
+      <div class="user-avatar" id="my-avatar" style="background:#1e3a5f;cursor:pointer" title="點擊開啟設定"></div>
       <div style="flex:1;min-width:0">
         <div class="my-name" id="my-name-display">—</div>
         <div class="my-status">● 在線</div>
@@ -603,29 +679,44 @@ body {
     </div>
   </div>
 
-  <!-- DM Panel -->
-  <div id="panel-dm">
-    <div class="dm-topbar">
-      <div class="dm-with">私訊：<span id="dm-with-name">—</span></div>
-      <button class="btn-close-dm" id="close-dm">✕</button>
-    </div>
-    <div class="dm-messages" id="dm-messages"></div>
-    <div class="dm-input-area">
-      <div class="dm-file-row">
-        <button class="btn-file" onclick="document.getElementById('dm-file-input').click()">📎 傳送檔案</button>
-        <input type="file" id="dm-file-input">
-        <span class="file-preview" id="file-preview-name"></span>
-      </div>
-      <div id="upload-progress-bar" style="display:none">
-        <div class="upload-bar"><div class="upload-fill" id="upload-fill" style="width:0%"></div></div>
-      </div>
-      <div class="dm-msg-row" style="position:relative">
-        <div id="emoji-panel-dm" class="emoji-panel"></div>
-        <button class="emoji-btn" id="emoji-btn-dm" title="表情符號">😊</button>
-        <input class="dm-input" id="dm-input" type="text" placeholder="私訊…" autocomplete="off">
-        <button class="btn-dm-send" id="dm-send">送</button>
+  <!-- Right Panel: DM list + chat window -->
+  <div id="panel-right">
+
+    <!-- DM 對話列表 -->
+    <div id="dm-list-panel">
+      <div class="dm-list-header">💬 私訊</div>
+      <div id="dm-conv-list" style="flex:1;overflow-y:auto;padding:4px 0"></div>
+      <div style="padding:10px 12px;border-top:1px solid var(--border);font-size:0.72rem;color:var(--muted);text-align:center">
+        點擊在線用戶或頭像開始私訊
       </div>
     </div>
+
+    <!-- 個別 DM 聊天視窗 -->
+    <div id="panel-dm">
+      <div class="dm-topbar">
+        <button class="btn-close-dm" id="close-dm" title="返回列表">←</button>
+        <div class="dm-with">私訊：<span id="dm-with-name">—</span></div>
+        <div style="width:28px"></div>
+      </div>
+      <div class="dm-messages" id="dm-messages"></div>
+      <div class="dm-input-area">
+        <div class="dm-file-row">
+          <button class="btn-file" onclick="document.getElementById('dm-file-input').click()">📎 傳送檔案</button>
+          <input type="file" id="dm-file-input">
+          <span class="file-preview" id="file-preview-name"></span>
+        </div>
+        <div id="upload-progress-bar" style="display:none">
+          <div class="upload-bar"><div class="upload-fill" id="upload-fill" style="width:0%"></div></div>
+        </div>
+        <div class="dm-msg-row" style="position:relative">
+          <div id="emoji-panel-dm" class="emoji-panel"></div>
+          <button class="emoji-btn" id="emoji-btn-dm" title="表情符號">😊</button>
+          <input class="dm-input" id="dm-input" type="text" placeholder="私訊…" autocomplete="off">
+          <button class="btn-dm-send" id="dm-send">送</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
 </div>
@@ -803,6 +894,182 @@ function updateQuotaUI() {
 
 function isQuotaExceeded() {
   return currentMonthBytes >= QUOTA_LIMIT_BYTES;
+}
+
+// ════════════════════════════════════════════════════
+//  🔊 TEXT-TO-SPEECH: 檔案已送達
+// ════════════════════════════════════════════════════
+function speakFileReceived() {
+  try {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance('檔案已送達，請收件');
+    utter.lang = 'zh-TW';
+    utter.rate = 0.95;
+    utter.volume = 0.9;
+    window.speechSynthesis.speak(utter);
+  } catch(e) {}
+}
+
+// ════════════════════════════════════════════════════
+//  💬 DM CONVERSATION LIST (localStorage)
+//  格式：{ uid: { nick, color, lastMsg, lastTs, unread } }
+// ════════════════════════════════════════════════════
+function getDMConvs() {
+  try { return JSON.parse(localStorage.getItem('dmConvs_v2') || '{}'); }
+  catch { return {}; }
+}
+function saveDMConvs(convs) {
+  localStorage.setItem('dmConvs_v2', JSON.stringify(convs));
+}
+function updateDMConv(uid, nick, color, lastMsg, isIncoming) {
+  const convs = getDMConvs();
+  const prev = convs[uid] || {};
+  convs[uid] = {
+    nick, color,
+    lastMsg: String(lastMsg).slice(0, 60),
+    lastTs: Date.now(),
+    unread: isIncoming ? (prev.unread || 0) + 1 : (prev.unread || 0)
+  };
+  saveDMConvs(convs);
+  renderDMConvList();
+}
+function clearDMConvUnread(uid) {
+  const convs = getDMConvs();
+  if (convs[uid]) { convs[uid].unread = 0; saveDMConvs(convs); }
+  renderDMConvList();
+}
+
+function renderDMConvList() {
+  const list = document.getElementById('dm-conv-list');
+  if (!list) return;
+  const convs = getDMConvs();
+  const sorted = Object.entries(convs).sort((a,b) => (b[1].lastTs||0) - (a[1].lastTs||0));
+  list.innerHTML = '';
+  if (sorted.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:0.8rem;padding:20px">還沒有私訊紀錄</div>';
+    return;
+  }
+  sorted.forEach(([uid, info]) => {
+    const item = document.createElement('div');
+    item.className = 'dm-conv-item' + (uid === dmUid ? ' active' : '');
+    item.dataset.uid = uid;
+    const hasUnread = info.unread > 0 && uid !== dmUid;
+    item.innerHTML = `
+      <div class="dm-conv-avatar" style="background:${info.color || '#3b82f6'}">
+        ${initials(info.nick)}
+        <div class="unread-ring ${hasUnread ? 'show' : ''}"></div>
+      </div>
+      <div class="dm-conv-info">
+        <div class="dm-conv-name">${escapeHtml(info.nick)}</div>
+        <div class="dm-conv-preview ${hasUnread ? 'unread' : ''}">${escapeHtml(info.lastMsg || '')}</div>
+      </div>
+      <div class="dm-conv-meta">
+        <div class="dm-conv-time">${info.lastTs ? formatTime(info.lastTs) : ''}</div>
+        <div class="dm-conv-badge ${hasUnread ? 'show' : ''}">${info.unread || ''}</div>
+      </div>
+    `;
+    item.addEventListener('click', () => openDM(uid, info.nick));
+    list.appendChild(item);
+  });
+}
+
+// 新訊息抖動效果
+function wiggleConvItem(uid) {
+  const item = document.querySelector(`.dm-conv-item[data-uid="${uid}"]`);
+  if (!item) return;
+  item.classList.remove('new-msg');
+  void item.offsetWidth; // reflow
+  item.classList.add('new-msg');
+  setTimeout(() => item.classList.remove('new-msg'), 600);
+}
+
+// ════════════════════════════════════════════════════
+//  🕐 AUTO CLEAR at 01:00 Taiwan Time (UTC+8)
+// ════════════════════════════════════════════════════
+const CLEAR_HOUR_TWN = 1;   // 台灣時間凌晨幾點清空
+const DB_LAST_CLEAR_KEY = 'lastClearDate';
+
+async function checkAndAutoClear() {
+  const now = new Date();
+  // 台灣時間 = UTC+8
+  const twn = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  const todayStr = twn.toISOString().slice(0, 10);  // "2026-02-28"
+
+  // 檢查 DB 上次清空日期
+  const snap = await get(dbRef(db, 'meta/lastClearDate'));
+  const lastClear = snap.exists() ? snap.val() : '';
+
+  if (twn.getUTCHours() >= CLEAR_HOUR_TWN && lastClear !== todayStr) {
+    // 執行清空
+    await clearAllData(todayStr);
+  }
+}
+
+async function clearAllData(dateStr) {
+  try {
+    // 清空大廳訊息 + typing
+    await set(dbRef(db, 'global/messages'), null);
+    await set(dbRef(db, 'global/typing'), null);
+    // 清空所有私訊
+    await set(dbRef(db, 'dms'), null);
+    // 記錄清空日期
+    await set(dbRef(db, 'meta/lastClearDate'), dateStr);
+    // 清空在線列表（讓大家重新登入）
+    toast('🌙 聊天室已於凌晨重置，記錄已清空', 5000);
+    // 清本地 DM conv list
+    localStorage.removeItem('dmConvs_v2');
+    renderDMConvList();
+    // 清畫面上的訊息
+    document.getElementById('global-messages').innerHTML = '';
+    document.getElementById('dm-messages').innerHTML = '';
+  } catch(e) { console.error('Auto clear failed:', e); }
+}
+
+// 每分鐘檢查一次
+function startAutoClearScheduler() {
+  checkAndAutoClear();
+  setInterval(checkAndAutoClear, 60 * 1000);
+}
+
+// ════════════════════════════════════════════════════
+//  ✏️ RENAME: 更新已存在的訊息 nick 欄位
+// ════════════════════════════════════════════════════
+async function renameInDB(oldNick, newNick) {
+  if (oldNick === newNick) return;
+  toast('⏳ 更新舊訊息中…');
+  const updates = {};
+  let count = 0;
+
+  // 大廳
+  const globalSnap = await get(dbRef(db, 'global/messages'));
+  if (globalSnap.exists()) {
+    globalSnap.forEach(child => {
+      if (child.val().uid === myUid) {
+        updates['global/messages/' + child.key + '/nick'] = newNick;
+        count++;
+      }
+    });
+  }
+
+  // 私訊（掃描所有 DM room）
+  const dmsSnap = await get(dbRef(db, 'dms'));
+  if (dmsSnap.exists()) {
+    dmsSnap.forEach(room => {
+      const msgs = room.child('messages');
+      msgs.forEach(child => {
+        if (child.val().uid === myUid) {
+          updates['dms/' + room.key + '/messages/' + child.key + '/nick'] = newNick;
+          count++;
+        }
+      });
+    });
+  }
+
+  if (Object.keys(updates).length > 0) {
+    await update(dbRef(db), updates);
+  }
+  toast(`✅ 暱稱已更新，共修改 ${count} 則訊息`);
 }
 
 // ════════════════════════════════════════════════════
@@ -993,19 +1260,24 @@ function updateMyPresenceColor(color) {
 }
 
 document.getElementById('settings-btn').addEventListener('click', openSettings);
+document.getElementById('my-avatar').addEventListener('click', openSettings);
 document.getElementById('settings-cancel').addEventListener('click', () => {
   document.getElementById('settings-modal').style.display = 'none';
 });
-document.getElementById('settings-save').addEventListener('click', () => {
+document.getElementById('settings-save').addEventListener('click', async () => {
   const newNick = document.getElementById('settings-nick').value.trim();
-  if (newNick) {
+  const oldNick = myNick;
+  if (newNick && newNick !== myNick) {
     myNick = newNick;
     localStorage.setItem('chatNick_' + myUid, myNick);
     document.getElementById('my-name-display').textContent = myNick;
     set(dbRef(db, 'presence/' + myUid + '/nick'), myNick);
+    document.getElementById('settings-modal').style.display = 'none';
+    await renameInDB(oldNick, newNick);
+  } else {
+    document.getElementById('settings-modal').style.display = 'none';
+    if (newNick) toast('✅ 設定已儲存');
   }
-  document.getElementById('settings-modal').style.display = 'none';
-  toast('✅ 設定已儲存');
 });
 
 // ════════════════════════════════════════════════════
@@ -1109,6 +1381,8 @@ function enterChat() {
   loadQuota();
   setupNotifications();
   setupEmojiButtons();
+  renderDMConvList();
+  startAutoClearScheduler();
   setupPresence();
   listenGlobal();
   listenUsers();
@@ -1386,13 +1660,20 @@ function openDM(uid, nick) {
   dmRoomId = makeRoomId(myUid, uid);
   unreadDM[uid] = 0;
 
-  document.getElementById('dm-with-name').textContent = nick;
+  // Switch panel: hide list, show chat
+  document.getElementById('dm-list-panel').classList.add('hide');
   document.getElementById('panel-dm').classList.add('open');
+
+  document.getElementById('dm-with-name').textContent = nick;
   document.getElementById('dm-messages').innerHTML = '';
+
+  // Clear unread in conv list
+  clearDMConvUnread(uid);
 
   const badge = document.getElementById('badge-' + uid);
   if (badge) { badge.textContent = ''; badge.classList.remove('show'); }
   document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.dm-conv-item').forEach(el => el.classList.remove('active'));
 
   const msgContainer = document.getElementById('dm-messages');
   const q = query(dbRef(db, 'dms/' + dmRoomId + '/messages'), limitToLast(100));
@@ -1444,6 +1725,22 @@ function renderDMMsg(msg, container) {
     unreadDM[msg.uid] = (unreadDM[msg.uid] || 0) + 1;
     const badge = document.getElementById('badge-' + msg.uid);
     if (badge) { badge.textContent = unreadDM[msg.uid]; badge.classList.add('show'); }
+  }
+
+  // Update DM conversation list
+  const previewText = msg.type === 'file' ? `📎 ${msg.fileName}` : msg.text;
+  const msgColor = isSelf ? avatarColor(myUid) : avatarColor(msg.uid);
+  const msgNick = isSelf ? myNick : msg.nick;
+  updateDMConv(msg.uid === myUid ? dmUid : msg.uid,
+               msg.uid === myUid ? dmNick : msg.nick,
+               msgColor, previewText, !isSelf);
+
+  // Wiggle conv list item if not currently open
+  if (!isSelf) wiggleConvItem(msg.uid);
+
+  // 檔案語音提示
+  if (!isSelf && msg.type === 'file') {
+    speakFileReceived();
   }
 }
 
@@ -1535,8 +1832,10 @@ async function uploadAndSend(file) {
 // ════════════════════════════════════════════════════
 document.getElementById('close-dm').addEventListener('click', () => {
   document.getElementById('panel-dm').classList.remove('open');
+  document.getElementById('dm-list-panel').classList.remove('hide');
   if (dmUnsub) { dmUnsub(); dmUnsub = null; }
   dmUid = null; dmNick = null; dmRoomId = null;
+  renderDMConvList();
   document.querySelectorAll('.user-item').forEach(el => el.classList.remove('active'));
 });
 
