@@ -1569,7 +1569,6 @@ function updateMyPresenceColor(color) {
 // ════════════════════════════════════════════════════
 //  📊 留言統計
 // ════════════════════════════════════════════════════
-document.getElementById('stats-btn').addEventListener('click', openStats);
 
 async function openStats() {
   if (!myUid || !isGoogleUser) {
@@ -1648,18 +1647,16 @@ async function loadStats() {
   ).join('') || '<div style="color:var(--muted);font-size:0.8rem">尚無資料</div>';
 }
 
-// 登出
-const signoutBtn = document.getElementById('signout-btn');
-if (signoutBtn) signoutBtn.addEventListener('click', async () => {
+// 登出（在 setupButtons() 裡綁定）
+async function doSignOut() {
   if (!confirm('確定要登出嗎？')) return;
   authHandled = false;
   await signOut(auth);
   document.getElementById('login-modal').classList.remove('hide');
-  signoutBtn.style.display = 'none';
-});
+  const sb = document.getElementById('signout-btn');
+  if (sb) sb.style.display = 'none';
+}
 
-document.getElementById('settings-btn').addEventListener('click', openSettings);
-document.getElementById('my-avatar').addEventListener('click', openSettings);
 document.getElementById('settings-cancel').addEventListener('click', () => {
   document.getElementById('settings-modal').style.display = 'none';
 });
@@ -1835,6 +1832,16 @@ function enterChat() {
   listenGlobal();
   listenUsers();
   setupGlobalInput();
+
+  // ── 按鈕事件（這裡綁才保證 DOM 存在）──
+  const settingsBtn = document.getElementById('settings-btn');
+  if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
+  const statsBtn = document.getElementById('stats-btn');
+  if (statsBtn) statsBtn.addEventListener('click', openStats);
+  const signoutBtn = document.getElementById('signout-btn');
+  if (signoutBtn) signoutBtn.addEventListener('click', doSignOut);
+  const myAvatarEl = document.getElementById('my-avatar');
+  if (myAvatarEl) myAvatarEl.addEventListener('click', openSettings);
 }
 
 // ════════════════════════════════════════════════════
