@@ -1274,8 +1274,17 @@ async function handleClearSignal() {
   document.getElementById('dm-list-panel').classList.remove('hide');
   dmUid = null; dmNick = null; dmRoomId = null;
 
-  // 2 秒後重新寫入自己的 presence（重新上線）
-  setTimeout(() => setupPresence(), 2000);
+  // 重新寫入自己的 presence（等 DB 穩定後）
+  setTimeout(async () => {
+    try {
+      const presR = dbRef(db, 'presence/' + myUid);
+      onDisconnect(presR).remove();
+      await set(presR, { nick: myNick, uid: myUid, color: avatarColor(myUid), ts: serverTimestamp() });
+    } catch(e) {
+      console.warn('Re-presence failed, retrying...', e);
+      setTimeout(() => setupPresence(), 2000);
+    }
+  }, 1500);
 }
 
 // 遞迴刪除 Storage 資料夾內所有檔案
@@ -1614,9 +1623,27 @@ onAuthStateChanged(auth, user => {
   if (user) {
     authHandled = true;
     myUid = user.uid;
+
+    // ── UID 遷移：如果這次 UID 跟上次不同（凌晨清空後建了新帳號）
+    //    把舊 UID 的暱稱/顏色搬到新 UID，避免要求重新輸入暱稱
+    const savedUid = localStorage.getItem('savedUid');
+    if (savedUid && savedUid !== myUid) {
+      const oldNick  = localStorage.getItem('chatNick_' + savedUid);
+      const oldColor = localStorage.getItem('avatarColor_' + savedUid);
+      if (oldNick) {
+        localStorage.setItem('chatNick_' + myUid, oldNick);
+        localStorage.removeItem('chatNick_' + savedUid);
+      }
+      if (oldColor) {
+        localStorage.setItem('avatarColor_' + myUid, oldColor);
+        localStorage.removeItem('avatarColor_' + savedUid);
+      }
+    }
+    // 記錄最新 UID
+    localStorage.setItem('savedUid', myUid);
+
     waitForConnectionThenEnter();
   } else {
-    // 還沒有 session，發起匿名登入
     signInAnonymously(auth).catch(err => {
       console.error(err);
       hideLoading();
@@ -1771,16 +1798,21 @@ function setupNotifications() {
 // ════════════════════════════════════════════════════
 //  PRESENCE
 // ════════════════════════════════════════════════════
-function setupPresence() {
+async function setupPresence() {
   const presR = dbRef(db, 'presence/' + myUid);
-  // enterChat() 已確保 DB 連線，直接設定 presence 並掛斷線清除
-  onDisconnect(presR).remove();
-  set(presR, { nick: myNick, uid: myUid, color: avatarColor(myUid), ts: serverTimestamp() });
+  try {
+    onDisconnect(presR).remove();
+    await set(presR, { nick: myNick, uid: myUid, color: avatarColor(myUid), ts: serverTimestamp() });
+  } catch(e) {
+    console.warn('setupPresence failed:', e);
+    // 3 秒後重試
+    setTimeout(() => setupPresence(), 3000);
+    return;
+  }
 
-  // 重新連線時也更新（例如網路斷了又回來）
-  const connR = dbRef(db, '.info/connected');
-  onValue(connR, snap => {
-    if (!snap.val()) return;
+  // 監聽連線狀態，斷線重連後自動更新
+  onValue(dbRef(db, '.info/connected'), snap => {
+    if (!snap.val()) return;   // 斷線中，不動作
     onDisconnect(presR).remove();
     set(presR, { nick: myNick, uid: myUid, color: avatarColor(myUid), ts: serverTimestamp() });
   });
@@ -2303,6 +2335,14 @@ function updateMobDMBadge(totalUnread) {
     badge.classList.remove('show');
   }
 }
+
+// 頁面重新顯示時（從背景切回來）重新確認 presence
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && myUid) {
+    const presR = dbRef(db, 'presence/' + myUid);
+    set(presR, { nick: myNick, uid: myUid, color: avatarColor(myUid), ts: serverTimestamp() });
+  }
+});
 
 // ════════════════════════════════════════════════════
 //  HAMBURGER (mobile)
