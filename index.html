@@ -28,7 +28,8 @@
   --dm-w: 320px;
 }
 
-html, body { height: 100%; overflow: hidden; }
+html, body { height: 100%; overflow: hidden; overscroll-behavior-y: contain; }
+@media (max-width: 768px) { html, body { overflow: auto; overscroll-behavior-y: auto; } }
 
 body {
   font-family: 'Noto Sans TC', sans-serif;
@@ -579,13 +580,14 @@ body {
 /* ── MOBILE OVERLAY ── */
 /* ── MOBILE NAV BAR (bottom tabs) ── */
 #mob-nav {
-  display: none;
+  display: none;  /* 桌機隱藏 */
   position: fixed; bottom: 0; left: 0; right: 0;
   height: 56px;
   background: var(--bg2);
   border-top: 1px solid var(--border);
   align-items: center; justify-content: space-around;
-  z-index: 70;
+  z-index: 9999;  /* 永遠在最上層 */
+  -webkit-tap-highlight-color: transparent;
 }
 #mob-nav button {
   flex: 1; height: 100%;
@@ -622,51 +624,67 @@ body {
 .hamburger span { display: block; width: 20px; height: 2px; background: var(--text); border-radius: 2px; }
 
 @media (max-width: 768px) {
-  /* 隱藏桌面版 hamburger，改用底部 nav */
   .hamburger { display: none !important; }
-  #mob-nav { display: flex; z-index: 70; }
 
-  /* 三個面板都收起，用 mob-show 控制 */
+  /* ── 底部導覽列 ── */
+  #mob-nav {
+    display: flex !important;
+    z-index: 9999 !important;
+  }
+
+  /* ── overlay ── */
+  #mob-overlay {
+    z-index: 8000;
+    touch-action: none;
+  }
+
+  /* ── 左右面板 ── */
   #panel-left {
-    position: fixed; left: 0; top: 0; bottom: 56px; z-index: 60;
-    width: 80vw; min-width: unset;
-    transform: translateX(-100%);
-    transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
-    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+    position: fixed; left: 0; top: 0; bottom: 56px;
+    z-index: 8500;
+    width: 82vw; min-width: unset; max-width: 320px;
+    transform: translateX(-105%);
+    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 4px 0 30px rgba(0,0,0,0.6);
+    overflow-y: auto;
   }
   #panel-left.mob-show { transform: translateX(0); }
 
   #panel-right {
-    position: fixed; right: 0; top: 0; bottom: 56px; z-index: 60;
-    width: 90vw; min-width: unset;
-    transform: translateX(100%);
-    transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
-    box-shadow: -4px 0 24px rgba(0,0,0,0.5);
+    position: fixed; right: 0; top: 0; bottom: 56px;
+    z-index: 8500;
+    width: 92vw; min-width: unset; max-width: 380px;
+    transform: translateX(105%);
+    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: -4px 0 30px rgba(0,0,0,0.6);
+    overflow-y: auto;
   }
   #panel-right.mob-show { transform: translateX(0); }
 
-  /* 主聊天區補底部 nav 的高度 */
-  #main-chat { padding-bottom: 56px; }
+  /* ── 主聊天 ── */
+  #main-chat {
+    padding-bottom: 56px;
+    width: 100%; min-width: unset;
+    overflow-y: auto;
+  }
+  #app { overflow: hidden; height: calc(100vh - 56px); }
 
-  /* 時鐘在手機上縮小 */
+  /* 時鐘隱藏 */
   #topbar-clock { display: none; }
 
-  /* 訊息氣泡手機版放大可點 */
+  /* 氣泡 */
   .msg-bubble { font-size: 0.92rem; }
   .msg-avatar { width: 30px; height: 30px; min-width: 30px; font-size: 0.72rem; }
+  .msg-row { max-width: 90%; }
 
-  /* input bar 手機版 */
-  .chat-input-bar { padding: 8px 12px; }
-  .btn-send { padding: 0 12px; font-size: 0.8rem; }
-
-  /* DM input */
+  /* input */
+  .chat-input-bar { padding: 8px 10px; }
+  .btn-send { padding: 0 10px; font-size: 0.8rem; }
   .dm-input-area { padding: 8px 10px; }
+  .emoji-panel { max-height: 200px; }
 
-  /* emoji panel 在手機上佔更多空間 */
-  .emoji-panel { max-height: 220px; }
-
-  /* 左側面板在手機上不顯示 quota 文字，只顯示 bar */
-  #quota-detail { display: none; }
+  /* 聊天室訊息區可以捲動 */
+  .messages, .dm-messages { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 }
 
 /* Typing indicator */
@@ -826,26 +844,20 @@ body {
 </div>
 
 <!-- Mobile overlay -->
-<div id="mob-overlay" ontouchstart="event.preventDefault();mobTab('lobby')"></div>
+<div id="mob-overlay"></div>
 
 <!-- Mobile bottom nav -->
 <div id="mob-nav">
-  <button id="mob-tab-lobby" class="active"
-    onclick="mobTab('lobby')"
-    ontouchstart="event.preventDefault();mobTab('lobby')">
+  <button id="mob-tab-lobby" class="active">
     <div class="nav-icon" style="pointer-events:none">💬</div>
     <span style="pointer-events:none">大廳</span>
   </button>
-  <button id="mob-tab-users"
-    onclick="mobTab('users')"
-    ontouchstart="event.preventDefault();mobTab('users')">
+  <button id="mob-tab-users">
     <div class="nav-icon" style="pointer-events:none">👥</div>
     <span style="pointer-events:none">在線</span>
     <div class="nav-badge" id="mob-badge-users" style="pointer-events:none"></div>
   </button>
-  <button id="mob-tab-dm"
-    onclick="mobTab('dm')"
-    ontouchstart="event.preventDefault();mobTab('dm')">
+  <button id="mob-tab-dm">
     <div class="nav-icon" style="pointer-events:none">📩</div>
     <span style="pointer-events:none">私訊</span>
     <div class="nav-badge" id="mob-badge-dm" style="pointer-events:none"></div>
@@ -1652,6 +1664,7 @@ function enterChat() {
   renderDMConvList();
   startAutoClearScheduler();
   listenClearSignal();
+  bindMobNav();
   setupPresence();
   listenGlobal();
   listenUsers();
@@ -2226,42 +2239,61 @@ function mobTab(tab) {
   if (!isMobile()) return;
   mobCurrentTab = tab;
 
-  const left  = document.getElementById('panel-left');
-  const right = document.getElementById('panel-right');
+  const left    = document.getElementById('panel-left');
+  const right   = document.getElementById('panel-right');
   const overlay = document.getElementById('mob-overlay');
 
-  // 全部收起
   left.classList.remove('mob-show');
   right.classList.remove('mob-show');
   overlay.classList.remove('show');
 
-  // 更新 tab active 狀態
-  ['lobby','users','dm'].forEach(t => {
-    document.getElementById('mob-tab-' + t)?.classList.remove('active');
-  });
+  ['lobby','users','dm'].forEach(t =>
+    document.getElementById('mob-tab-' + t)?.classList.remove('active')
+  );
   document.getElementById('mob-tab-' + tab)?.classList.add('active');
 
   if (tab === 'users') {
     left.classList.add('mob-show');
     overlay.classList.add('show');
-    document.getElementById('mob-badge-users').classList.remove('show');
+    document.getElementById('mob-badge-users')?.classList.remove('show');
   } else if (tab === 'dm') {
     right.classList.add('mob-show');
     overlay.classList.add('show');
-    document.getElementById('mob-badge-dm').classList.remove('show');
+    document.getElementById('mob-badge-dm')?.classList.remove('show');
   }
-  // lobby: 兩邊都收起，顯示主聊天
 }
 
-// 點 overlay 收起面板
-document.getElementById('mob-overlay').addEventListener('click', () => {
-  if (!isMobile()) return;
-  mobTab('lobby');
-});
+// ── 綁定底部 tab 事件（用 touchend 最可靠，避免 300ms 延遲）──
+function bindMobNav() {
+  ['lobby','users','dm'].forEach(tab => {
+    const btn = document.getElementById('mob-tab-' + tab);
+    if (!btn) return;
+
+    // touchend：手指離開時觸發（比 touchstart 更不容易誤觸）
+    btn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      mobTab(tab);
+    }, { passive: false });
+
+    // click 作為 fallback（桌機或不支援 touch 的裝置）
+    btn.addEventListener('click', (e) => {
+      if (e.detail === 0) return; // 已被 touch 處理過
+      mobTab(tab);
+    });
+  });
+
+  // overlay 點擊收起
+  const overlay = document.getElementById('mob-overlay');
+  overlay.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    mobTab('lobby');
+  }, { passive: false });
+  overlay.addEventListener('click', () => mobTab('lobby'));
+}
 
 // 有新私訊時顯示底部 tab badge
 function updateMobDMBadge(totalUnread) {
-  if (!isMobile()) return;
   const badge = document.getElementById('mob-badge-dm');
   if (!badge) return;
   if (totalUnread > 0 && mobCurrentTab !== 'dm') {
