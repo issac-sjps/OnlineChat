@@ -687,6 +687,110 @@ body {
   .messages, .dm-messages { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 }
 
+
+/* ── GOOGLE LOGIN MODAL ── */
+#login-modal {
+  position: fixed; inset: 0; z-index: 92;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(12px);
+  display: flex; align-items: center; justify-content: center;
+}
+#login-modal.hide { display: none; }
+.login-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px 36px;
+  width: 340px;
+  text-align: center;
+  box-shadow: 0 0 80px rgba(34,211,238,0.1);
+}
+.login-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.6rem; font-weight: 800;
+  margin-bottom: 8px;
+}
+.login-sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 28px; line-height: 1.5; }
+.btn-google {
+  width: 100%; padding: 12px;
+  background: #fff; color: #333;
+  border: none; border-radius: 10px;
+  font-size: 0.95rem; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center; gap: 10px;
+  margin-bottom: 12px;
+  transition: background 0.15s, transform 0.1s;
+}
+.btn-google:hover { background: #f1f1f1; transform: translateY(-1px); }
+.btn-google img { width: 20px; height: 20px; }
+.btn-anon {
+  width: 100%; padding: 10px;
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--border); border-radius: 10px;
+  font-size: 0.85rem; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.btn-anon:hover { color: var(--text); border-color: var(--text); }
+
+/* ── STATS PANEL ── */
+#stats-modal {
+  position: fixed; inset: 0; z-index: 95;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(10px);
+  display: none; align-items: center; justify-content: center;
+}
+#stats-modal.show { display: flex; }
+.stats-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 20px; padding: 28px;
+  width: 360px; max-width: 92vw;
+  max-height: 80vh; overflow-y: auto;
+}
+.stats-title {
+  font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 700;
+  margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;
+}
+.stats-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px; margin-bottom: 20px;
+}
+.stats-card {
+  background: var(--bg); border-radius: 12px;
+  padding: 14px; text-align: center;
+}
+.stats-card .num {
+  font-size: 1.8rem; font-weight: 800;
+  font-family: 'Syne', sans-serif; color: var(--accent);
+}
+.stats-card .label { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+.stats-section { margin-top: 16px; }
+.stats-section h4 { font-size: 0.8rem; color: var(--muted); margin-bottom: 10px; }
+.stats-bar-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 6px; font-size: 0.82rem;
+}
+.stats-bar-row .bar-label { width: 60px; text-align: right; font-size: 0.75rem; color: var(--muted); }
+.stats-bar-row .bar-track {
+  flex: 1; height: 6px; background: var(--border); border-radius: 99px; overflow: hidden;
+}
+.stats-bar-row .bar-fill { height: 100%; background: var(--accent); border-radius: 99px; }
+.stats-emoji-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.stats-emoji-item {
+  background: var(--bg); border-radius: 8px;
+  padding: 4px 10px; font-size: 0.82rem;
+}
+
+/* ── 訊息刪除按鈕 ── */
+.msg-delete {
+  opacity: 0; font-size: 0.7rem; color: var(--muted);
+  cursor: pointer; padding: 2px 6px; border-radius: 4px;
+  transition: opacity 0.15s, color 0.15s;
+  background: none; border: none;
+  align-self: center; flex-shrink: 0;
+}
+.msg-row:hover .msg-delete { opacity: 1; }
+.msg-delete:hover { color: #f87171; }
+
 /* Typing indicator */
 .typing-indicator {
   font-size: 0.75rem; color: var(--muted);
@@ -696,6 +800,51 @@ body {
 </style>
 </head>
 <body>
+
+
+<!-- Login Modal -->
+<div id="login-modal" class="hide">
+  <div class="login-box">
+    <div class="login-title">💬 ChatRoom</div>
+    <div class="login-sub">登入 Google 以保留你的發言紀錄和統計<br>或以訪客身份匿名使用</div>
+    <button class="btn-google" id="btn-google-login">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
+      使用 Google 登入
+    </button>
+    <button class="btn-anon" id="btn-anon-login">👤 匿名訪客進入</button>
+  </div>
+</div>
+
+<!-- Stats Modal -->
+<div id="stats-modal">
+  <div class="stats-box">
+    <div class="stats-title">
+      <span>📊 我的留言統計</span>
+      <button onclick="closeStats()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem">✕</button>
+    </div>
+    <div class="stats-grid">
+      <div class="stats-card">
+        <div class="num" id="stat-msg-count">0</div>
+        <div class="label">總發言數</div>
+      </div>
+      <div class="stats-card">
+        <div class="num" id="stat-file-count">0</div>
+        <div class="label">傳送檔案數</div>
+      </div>
+    </div>
+    <div class="stats-section">
+      <h4>最常發言時段</h4>
+      <div id="stat-hours"></div>
+    </div>
+    <div class="stats-section">
+      <h4>最常用表情符號</h4>
+      <div class="stats-emoji-row" id="stat-emojis"></div>
+    </div>
+    <div style="margin-top:20px;text-align:center">
+      <button class="btn-enter" onclick="closeStats()" style="padding:8px 24px;font-size:0.85rem">關閉</button>
+    </div>
+  </div>
+</div>
 
 <!-- Loading Screen -->
 <div id="loading-screen">
@@ -807,7 +956,7 @@ body {
       <div class="dm-messages" id="dm-messages"></div>
       <div class="dm-input-area">
         <div class="dm-file-row">
-          <button class="btn-file" onclick="pickFileForDrive()">📎 傳送檔案</button>
+          <label class="btn-file" id="btn-file-label" for="dm-file-input" style="cursor:pointer" onclick="return checkBeforeUpload()">📎 傳送檔案</label>
           <input type="file" id="dm-file-input" style="display:none">
           <span class="file-preview" id="file-preview-name"></span>
         </div>
@@ -873,7 +1022,8 @@ body {
 <script type="module">
 import { initializeApp }          from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import { getAnalytics }           from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
-import { getAuth, signInAnonymously, onAuthStateChanged }
+import { getAuth, signInAnonymously, signInWithPopup, GoogleAuthProvider,
+         onAuthStateChanged, signOut }
                                   from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
 import { getDatabase, ref as dbRef, set, get, push, remove, update,
          onValue, onChildAdded, onDisconnect, serverTimestamp, query,
@@ -1044,17 +1194,12 @@ function updateQuotaUI() {
   if (upLabel) upLabel.textContent = `${fmtBytes(todayUploadBytes)} / ${UPLOAD_LIMIT_GB} GB`;
   if (dlLabel) dlLabel.textContent = `${fmtBytes(todayDownloadBytes)} / ${DOWNLOAD_LIMIT_GB} GB`;
 
-  // 上傳鎖定
+  // 上傳警示（不鎖定，只提示）
   const uploadLocked = todayUploadBytes >= UPLOAD_LIMIT_BYTES;
-  const fileBtn   = document.querySelector('.btn-file');
-  const fileInput = document.getElementById('dm-file-input');
-  if (fileBtn) {
-    fileBtn.disabled   = uploadLocked;
-    fileBtn.title      = uploadLocked ? '今日上傳已達 1GB 上限，明天重置' : '';
-    fileBtn.style.opacity = uploadLocked ? '0.4' : '';
-    fileBtn.style.cursor  = uploadLocked ? 'not-allowed' : '';
+  const fileBtn = document.querySelector('.btn-file');
+  if (fileBtn && uploadLocked) {
+    fileBtn.title = '今日上傳量較高，請注意 Google Drive 空間';
   }
-  if (fileInput) fileInput.disabled = uploadLocked;
 }
 
 function isQuotaExceeded() {
@@ -1191,133 +1336,7 @@ function wiggleConvItem(uid) {
   setTimeout(() => item.classList.remove('new-msg'), 600);
 }
 
-// ════════════════════════════════════════════════════
-//  🕐 AUTO CLEAR at 01:00 Taiwan Time (UTC+8)
-// ════════════════════════════════════════════════════
-const CLEAR_HOUR_TWN = 1;   // 台灣時間凌晨幾點清空
-const DB_LAST_CLEAR_KEY = 'lastClearDate';
-
-async function checkAndAutoClear() {
-  const now = new Date();
-  // 台灣時間 = UTC+8
-  const twn = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-  const todayStr = twn.toISOString().slice(0, 10);  // "2026-02-28"
-
-  // 檢查 DB 上次清空日期
-  const snap = await get(dbRef(db, 'meta/lastClearDate'));
-  const lastClear = snap.exists() ? snap.val() : '';
-
-  if (twn.getUTCHours() >= CLEAR_HOUR_TWN && lastClear !== todayStr) {
-    // 執行清空
-    await clearAllData(todayStr);
-  }
-}
-
-async function clearAllData(dateStr) {
-  try {
-    toast('🌙 凌晨重置中，請稍候…', 3000);
-
-    // ── 第一步：自己負責清自己有權限的資料 ──
-    // 1. 清大廳訊息
-    await set(dbRef(db, 'global/messages'), null);
-
-    // 2. 清大廳 typing（現在 rules 允許整個清）
-    await set(dbRef(db, 'global/typing'), null);
-
-    // 3. 清 quota 計數
-    await set(dbRef(db, 'quota'), null);
-
-    // 4. 刪除 Storage 所有檔案（遞迴）
-    // ⚠️ 需要在 Firebase Storage 設定 CORS 才能從 GitHub Pages 刪除
-    // 如果出現 CORS 錯誤，檔案會在下次手動清或 Firebase Console 清
-    try {
-      await deleteStorageFolder(stRef(storage, 'dms'));
-    } catch(e) {
-      // CORS or permission error — 靜默略過，不影響其他清空流程
-      console.warn('Storage CORS/delete skipped:', e.message);
-    }
-
-    // 5. 記錄清空日期 + 寫入 clearSignal 通知所有在線客戶端
-    const clearPayload = { date: dateStr, ts: serverTimestamp() };
-    await set(dbRef(db, 'meta/lastClearDate'), dateStr);
-    await set(dbRef(db, 'clearSignal'), clearPayload);
-    // clearSignal 會觸發所有客戶端執行 handleClearSignal()
-    // 各自清自己的 presence、dms room、本地資料
-
-    toast('✅ 聊天室已於凌晨 1:00 重置完畢', 6000);
-
-  } catch(e) {
-    console.error('Auto clear failed:', e);
-    toast('⚠️ 重置時發生錯誤：' + e.message, 4000);
-  }
-}
-
-// 每個客戶端收到 clearSignal 後，各自清自己負責的資料
-async function handleClearSignal() {
-  // 清自己的 presence
-  await remove(dbRef(db, 'presence/' + myUid));
-
-  // 刪自己上傳的 Drive 檔案
-  await deleteMyDriveFiles();
-
-  // 清本地 DM conv list
-  localStorage.removeItem('dmConvs_v2');
-  renderDMConvList();
-
-  // 清畫面上的訊息
-  document.getElementById('global-messages').innerHTML = '';
-  document.getElementById('dm-messages').innerHTML = '';
-
-  // 如果正在開著 DM，關掉回列表
-  if (dmUnsub) { dmUnsub(); dmUnsub = null; }
-  document.getElementById('panel-dm').classList.remove('open');
-  document.getElementById('dm-list-panel').classList.remove('hide');
-  dmUid = null; dmNick = null; dmRoomId = null;
-
-  // 重新寫入自己的 presence（等 DB 穩定後）
-  setTimeout(async () => {
-    try {
-      const presR = dbRef(db, 'presence/' + myUid);
-      onDisconnect(presR).remove();
-      await set(presR, { nick: myNick, uid: myUid, color: avatarColor(myUid), ts: serverTimestamp() });
-    } catch(e) {
-      console.warn('Re-presence failed, retrying...', e);
-      setTimeout(() => setupPresence(), 2000);
-    }
-  }, 1500);
-}
-
-// 遞迴刪除 Storage 資料夾內所有檔案
-async function deleteStorageFolder(folderRef) {
-  const res = await listAll(folderRef);
-  // 刪當前層所有檔案
-  const fileDeletes = res.items.map(item => deleteObject(item));
-  // 遞迴刪子資料夾
-  const folderDeletes = res.prefixes.map(prefix => deleteStorageFolder(prefix));
-  await Promise.all([...fileDeletes, ...folderDeletes]);
-}
-
-
-// 監聽其他客戶端發出的 clearSignal
-let lastHandledClearTs = 0;
-function listenClearSignal() {
-  onValue(dbRef(db, 'clearSignal'), async snap => {
-    if (!snap.exists()) return;
-    const sig = snap.val();
-    const sigTs = sig.ts || 0;
-    // 避免重複處理（同一個 ts 只處理一次）
-    if (sigTs <= lastHandledClearTs) return;
-    lastHandledClearTs = sigTs;
-    // 只有不是自己觸發清空的才需要處理（自己觸發的已在 clearAllData 裡處理）
-    await handleClearSignal();
-  });
-}
-
-// 每分鐘檢查一次
-function startAutoClearScheduler() {
-  checkAndAutoClear();
-  setInterval(checkAndAutoClear, 60 * 1000);
-}
+// 自動清空功能已停用（改為永久保留）
 
 // ════════════════════════════════════════════════════
 //  ✏️ RENAME: 更新已存在的訊息 nick 欄位
@@ -1546,6 +1565,99 @@ function updateMyPresenceColor(color) {
   set(dbRef(db, 'presence/' + myUid + '/color'), color);
 }
 
+
+// ════════════════════════════════════════════════════
+//  📊 留言統計
+// ════════════════════════════════════════════════════
+document.getElementById('stats-btn').addEventListener('click', openStats);
+
+async function openStats() {
+  if (!myUid || !isGoogleUser) {
+    toast('📊 統計功能需要 Google 登入才可使用');
+    return;
+  }
+  document.getElementById('stats-modal').classList.add('show');
+  await loadStats();
+}
+
+function closeStats() {
+  document.getElementById('stats-modal').classList.remove('show');
+}
+
+async function loadStats() {
+  let msgCount = 0, fileCount = 0;
+  const hourMap = {}; // 0~23
+  const emojiMap = {};
+
+  // 掃大廳訊息
+  const globalSnap = await get(dbRef(db, 'global/messages'));
+  if (globalSnap.exists()) {
+    globalSnap.forEach(child => {
+      const m = child.val();
+      if (m.uid !== myUid) return;
+      if (m.type === 'file') { fileCount++; return; }
+      msgCount++;
+      // 時段
+      if (m.ts) {
+        const h = new Date(m.ts + 8*60*60*1000).getUTCHours(); // TWN
+        hourMap[h] = (hourMap[h] || 0) + 1;
+      }
+      // 表情符號（掃訊息裡的 emoji）
+      const emojis = (m.text || '').match(/\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu) || [];
+      emojis.forEach(e => { emojiMap[e] = (emojiMap[e] || 0) + 1; });
+    });
+  }
+
+  // 掃私訊
+  const dmsSnap = await get(dbRef(db, 'dms'));
+  if (dmsSnap.exists()) {
+    dmsSnap.forEach(room => {
+      room.child('messages').forEach(child => {
+        const m = child.val();
+        if (m.uid !== myUid) return;
+        if (m.type === 'file') { fileCount++; return; }
+        msgCount++;
+        if (m.ts) {
+          const h = new Date(m.ts + 8*60*60*1000).getUTCHours();
+          hourMap[h] = (hourMap[h] || 0) + 1;
+        }
+        const emojis = (m.text || '').match(/\p{Emoji_Presentation}|\p{Extended_Pictographic}/gu) || [];
+        emojis.forEach(e => { emojiMap[e] = (emojiMap[e] || 0) + 1; });
+      });
+    });
+  }
+
+  // 更新 UI
+  document.getElementById('stat-msg-count').textContent = msgCount;
+  document.getElementById('stat-file-count').textContent = fileCount;
+
+  // 時段圖表（顯示前 5 名）
+  const topHours = Object.entries(hourMap).sort((a,b) => b[1]-a[1]).slice(0,5);
+  const maxH = topHours[0]?.[1] || 1;
+  document.getElementById('stat-hours').innerHTML = topHours.map(([h, cnt]) => `
+    <div class="stats-bar-row">
+      <div class="bar-label">${String(h).padStart(2,'0')}:00</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(cnt/maxH*100).toFixed(0)}%"></div></div>
+      <span style="font-size:0.75rem;color:var(--muted);width:24px">${cnt}</span>
+    </div>`).join('') || '<div style="color:var(--muted);font-size:0.8rem">尚無資料</div>';
+
+  // 表情符號（前 8 名）
+  const topEmojis = Object.entries(emojiMap).sort((a,b) => b[1]-a[1]).slice(0,8);
+  document.getElementById('stat-emojis').innerHTML = topEmojis.map(([e, cnt]) =>
+    `<div class="stats-emoji-item">${e} <span style="color:var(--muted)">${cnt}</span></div>`
+  ).join('') || '<div style="color:var(--muted);font-size:0.8rem">尚無資料</div>';
+}
+
+// 登出
+const signoutBtn = document.getElementById('signout-btn');
+if (signoutBtn) signoutBtn.addEventListener('click', async () => {
+  if (!confirm('確定要登出嗎？')) return;
+  authHandled = false;
+  await signOut(auth);
+  document.getElementById('login-modal').classList.remove('hide');
+  signoutBtn.style.display = 'none';
+});
+
 document.getElementById('settings-btn').addEventListener('click', openSettings);
 document.getElementById('my-avatar').addEventListener('click', openSettings);
 document.getElementById('settings-cancel').addEventListener('click', () => {
@@ -1618,38 +1730,67 @@ function waitForConnectionThenEnter() {
   }, 5000);
 }
 
+// Google Auth Provider
+const googleProvider = new GoogleAuthProvider();
+let isGoogleUser = false;
+
 onAuthStateChanged(auth, user => {
   if (authHandled) return;
   if (user) {
     authHandled = true;
     myUid = user.uid;
+    isGoogleUser = !user.isAnonymous;
 
-    // ── UID 遷移：如果這次 UID 跟上次不同（凌晨清空後建了新帳號）
-    //    把舊 UID 的暱稱/顏色搬到新 UID，避免要求重新輸入暱稱
+    // 如果是 Google 用戶，用 Google displayName 當預設暱稱
+    if (isGoogleUser && user.displayName) {
+      const existing = localStorage.getItem('chatNick_' + myUid);
+      if (!existing) localStorage.setItem('chatNick_' + myUid, user.displayName);
+    }
+
+    // UID 遷移（匿名用戶換 UID 時保留暱稱）
     const savedUid = localStorage.getItem('savedUid');
     if (savedUid && savedUid !== myUid) {
       const oldNick  = localStorage.getItem('chatNick_' + savedUid);
       const oldColor = localStorage.getItem('avatarColor_' + savedUid);
-      if (oldNick) {
+      if (oldNick && !localStorage.getItem('chatNick_' + myUid)) {
         localStorage.setItem('chatNick_' + myUid, oldNick);
-        localStorage.removeItem('chatNick_' + savedUid);
       }
-      if (oldColor) {
+      if (oldColor && !localStorage.getItem('avatarColor_' + myUid)) {
         localStorage.setItem('avatarColor_' + myUid, oldColor);
-        localStorage.removeItem('avatarColor_' + savedUid);
       }
     }
-    // 記錄最新 UID
     localStorage.setItem('savedUid', myUid);
 
+    // 顯示登出按鈕（Google 用戶才顯示）
+    if (isGoogleUser) {
+      const signoutBtn = document.getElementById('signout-btn');
+      if (signoutBtn) signoutBtn.style.display = '';
+    }
+
+    document.getElementById('login-modal').classList.add('hide');
     waitForConnectionThenEnter();
   } else {
-    signInAnonymously(auth).catch(err => {
-      console.error(err);
-      hideLoading();
-      toast('連線失敗，請重新整理頁面');
-    });
+    // 沒有 session，顯示登入畫面
+    hideLoading();
+    document.getElementById('login-modal').classList.remove('hide');
   }
+});
+
+// Google 登入按鈕
+document.getElementById('btn-google-login').addEventListener('click', async () => {
+  try {
+    await signInWithPopup(auth, googleProvider);
+    // onAuthStateChanged 會自動接手
+  } catch(e) {
+    toast('登入失敗：' + e.message);
+  }
+});
+
+// 匿名訪客按鈕
+document.getElementById('btn-anon-login').addEventListener('click', () => {
+  signInAnonymously(auth).catch(err => {
+    toast('連線失敗：' + err.message);
+  });
 });
 
 function showNickModal() {
@@ -1689,8 +1830,6 @@ function enterChat() {
   setupNotifications();
   setupEmojiButtons();
   renderDMConvList();
-  startAutoClearScheduler();
-  listenClearSignal();
   bindMobNav();
   setupPresence();
   listenGlobal();
@@ -1860,12 +1999,12 @@ function listenGlobal() {
   const msgContainer = document.getElementById('global-messages');
   const q = query(dbRef(db, 'global/messages'), limitToLast(MAX_GLOBAL_MSGS));
   onChildAdded(q, snap => {
-    renderGlobalMsg(snap.val(), msgContainer);
+    renderGlobalMsg(snap.val(), msgContainer, snap.key);
     scrollBottom(msgContainer);
   });
 }
 
-function renderGlobalMsg(msg, container) {
+function renderGlobalMsg(msg, container, snap_key) {
   if (msg.type === 'system') {
     const div = document.createElement('div');
     div.className = 'msg-system';
@@ -1950,6 +2089,13 @@ function handleTyping() {
   set(dbRef(db, 'global/typing/' + myUid), myNick);
   clearTimeout(typingTimer);
   typingTimer = setTimeout(() => remove(dbRef(db, 'global/typing/' + myUid)), 2000);
+}
+
+
+async function deleteGlobalMsg(key) {
+  if (!key) return;
+  if (!confirm('確定刪除這則訊息？')) return;
+  await remove(dbRef(db, 'global/messages/' + key));
 }
 
 async function sendGlobal() {
@@ -2106,10 +2252,11 @@ async function sendDM() {
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzv4pMvysa3xHEKzf2Q5clILmDEdVp-whqGU1ZP5J_OmEStRZnyyMWLSdxbbNqolY17iQ/exec';
 
 // ── 選擇檔案 ──
-function pickFileForDrive() {
-  if (isQuotaExceeded()) { toast('🔒 今日上傳已達上限'); return; }
-  if (!dmRoomId) { toast('⚠️ 請先開啟私訊再傳送檔案'); return; }
-  document.getElementById('dm-file-input').click();
+// label onclick 返回 false 可阻止打開選檔視窗
+function checkBeforeUpload() {
+  if (isQuotaExceeded()) { toast('🔒 今日上傳已達上限'); return false; }
+  if (!dmRoomId) { toast('⚠️ 請先點選對話對象再傳送檔案'); return false; }
+  return true;  // 允許 label 打開 input
 }
 
 // ── 使用者選完檔案後觸發 ──
@@ -2146,10 +2293,11 @@ async function uploadViaAppsScript(file) {
 
     fill.style.width = '40%';
 
-    // 送給 Apps Script
+    // 送給 Apps Script（redirect:follow 必要，Apps Script 會 302 redirect）
     const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({
         action: 'upload',
         fileName: `${Date.now()}_${file.name}`,
@@ -2199,26 +2347,8 @@ async function uploadViaAppsScript(file) {
   }
 }
 
-// ── 凌晨清空：通知 Apps Script 刪除所有今日上傳的檔案 ──
-async function deleteMyDriveFiles() {
-  const snap = await get(dbRef(db, 'driveFiles/' + myUid));
-  if (!snap.exists()) return;
-
-  const fileIds = Object.values(snap.val()).map(f => f.fileId).filter(Boolean);
-  if (fileIds.length === 0) return;
-
-  try {
-    await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', fileIds })
-    });
-  } catch(e) {
-    console.warn('Drive delete skipped:', e.message);
-  }
-
-  await set(dbRef(db, 'driveFiles/' + myUid), null);
-}
+// deleteMyDriveFiles 已停用（永久保留模式）
+async function deleteMyDriveFiles() {}
 
 // ── 初始化 ──
 function setupDriveUpload() {
