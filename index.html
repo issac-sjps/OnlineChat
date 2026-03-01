@@ -2097,25 +2097,7 @@ async function sendDM() {
   }
 }
 
-// ════════════════════════════════════════════════════
-//  FILE UPLOAD + QUOTA CHECK
-// ════════════════════════════════════════════════════
-document.getElementById('dm-file-input').addEventListener('change', function() {
-  const file = this.files[0];
-  if (!file) return;
-  if (isQuotaExceeded()) {
-    toast('🔒 本月上傳已達上限，無法傳送檔案');
-    this.value = '';
-    return;
-  }
-  if (file.size > MAX_FILE_MB * 1024 * 1024) {
-    toast(`檔案不能超過 ${MAX_FILE_MB}MB`);
-    this.value = '';
-    return;
-  }
-  selectedFile = file;
-  document.getElementById('file-preview-name').textContent = file.name;
-});
+// FILE UPLOAD 由 setupDriveUpload() 處理（Google Drive via Apps Script）
 
 // ════════════════════════════════════════════════════
 //  📁 GOOGLE DRIVE 上傳（透過 Apps Script 後端）
