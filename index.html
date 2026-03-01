@@ -580,13 +580,12 @@ body {
 /* ── MOBILE NAV BAR (bottom tabs) ── */
 #mob-nav {
   display: none;
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 60;
+  position: fixed; bottom: 0; left: 0; right: 0;
   height: 56px;
   background: var(--bg2);
   border-top: 1px solid var(--border);
-  display: none;
   align-items: center; justify-content: space-around;
-  z-index: 65;
+  z-index: 70;
 }
 #mob-nav button {
   flex: 1; height: 100%;
@@ -625,7 +624,7 @@ body {
 @media (max-width: 768px) {
   /* 隱藏桌面版 hamburger，改用底部 nav */
   .hamburger { display: none !important; }
-  #mob-nav { display: flex; }
+  #mob-nav { display: flex; z-index: 70; }
 
   /* 三個面板都收起，用 mob-show 控制 */
   #panel-left {
@@ -790,8 +789,8 @@ body {
       <div class="dm-messages" id="dm-messages"></div>
       <div class="dm-input-area">
         <div class="dm-file-row">
-          <button class="btn-file" onclick="document.getElementById('dm-file-input').click()">📎 傳送檔案</button>
-          <input type="file" id="dm-file-input">
+          <button class="btn-file" onclick="pickFileForDrive()">📎 傳送檔案</button>
+          <input type="file" id="dm-file-input" style="display:none">
           <span class="file-preview" id="file-preview-name"></span>
         </div>
         <div id="upload-progress-bar" style="display:none">
@@ -827,23 +826,29 @@ body {
 </div>
 
 <!-- Mobile overlay -->
-<div id="mob-overlay"></div>
+<div id="mob-overlay" ontouchstart="event.preventDefault();mobTab('lobby')"></div>
 
 <!-- Mobile bottom nav -->
 <div id="mob-nav">
-  <button id="mob-tab-lobby" class="active" onclick="mobTab('lobby')">
-    <div class="nav-icon">💬</div>
-    <span>大廳</span>
+  <button id="mob-tab-lobby" class="active"
+    onclick="mobTab('lobby')"
+    ontouchstart="event.preventDefault();mobTab('lobby')">
+    <div class="nav-icon" style="pointer-events:none">💬</div>
+    <span style="pointer-events:none">大廳</span>
   </button>
-  <button id="mob-tab-users" onclick="mobTab('users')">
-    <div class="nav-icon">👥</div>
-    <span>在線</span>
-    <div class="nav-badge" id="mob-badge-users"></div>
+  <button id="mob-tab-users"
+    onclick="mobTab('users')"
+    ontouchstart="event.preventDefault();mobTab('users')">
+    <div class="nav-icon" style="pointer-events:none">👥</div>
+    <span style="pointer-events:none">在線</span>
+    <div class="nav-badge" id="mob-badge-users" style="pointer-events:none"></div>
   </button>
-  <button id="mob-tab-dm" onclick="mobTab('dm')">
-    <div class="nav-icon">📩</div>
-    <span>私訊</span>
-    <div class="nav-badge" id="mob-badge-dm"></div>
+  <button id="mob-tab-dm"
+    onclick="mobTab('dm')"
+    ontouchstart="event.preventDefault();mobTab('dm')">
+    <div class="nav-icon" style="pointer-events:none">📩</div>
+    <span style="pointer-events:none">私訊</span>
+    <div class="nav-badge" id="mob-badge-dm" style="pointer-events:none"></div>
   </button>
 </div>
 
@@ -1239,6 +1244,9 @@ async function clearAllData(dateStr) {
 async function handleClearSignal() {
   // 清自己的 presence
   await remove(dbRef(db, 'presence/' + myUid));
+
+  // 刪自己上傳的 Drive 檔案
+  await deleteMyDriveFiles();
 
   // 清本地 DM conv list
   localStorage.removeItem('dmConvs_v2');
@@ -1638,6 +1646,7 @@ function enterChat() {
 
   loadQuota();
   startClock();
+  setupDriveUpload();
   setupNotifications();
   setupEmojiButtons();
   renderDMConvList();
@@ -2063,47 +2072,131 @@ document.getElementById('dm-file-input').addEventListener('change', function() {
   document.getElementById('file-preview-name').textContent = file.name;
 });
 
-async function uploadAndSend(file) {
-  if (isQuotaExceeded()) { toast('🔒 本月上傳已達上限'); return; }
+// ════════════════════════════════════════════════════
+//  📁 GOOGLE DRIVE 上傳（透過 Apps Script 後端）
+//  Key 永遠在 Google 伺服器，前端完全看不到
+// ════════════════════════════════════════════════════
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzv4pMvysa3xHEKzf2Q5clILmDEdVp-whqGU1ZP5J_OmEStRZnyyMWLSdxbbNqolY17iQ/exec';
 
+// ── 選擇檔案 ──
+function pickFileForDrive() {
+  if (isQuotaExceeded()) { toast('🔒 今日上傳已達上限'); return; }
+  if (!dmRoomId) { toast('⚠️ 請先開啟私訊再傳送檔案'); return; }
+  document.getElementById('dm-file-input').click();
+}
+
+// ── 使用者選完檔案後觸發 ──
+function onDriveFileSelected(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+  // 檔案大小限制：50MB
+  if (file.size > 50 * 1024 * 1024) {
+    toast('❌ 檔案太大，上限 50MB');
+    return;
+  }
+  document.getElementById('file-preview-name').textContent = '📄 ' + file.name;
+  uploadViaAppsScript(file);
+}
+
+// ── 上傳到 Apps Script ──
+async function uploadViaAppsScript(file) {
   const btn = document.getElementById('dm-send');
-  btn.disabled = true;
   const progressBar = document.getElementById('upload-progress-bar');
   const fill = document.getElementById('upload-fill');
+  btn.disabled = true;
   progressBar.style.display = 'block';
+  fill.style.width = '10%';
 
   try {
-    const path = `dms/${dmRoomId}/${Date.now()}_${file.name}`;
-    const fileRef = stRef(storage, path);
-    const task = uploadBytesResumable(fileRef, file);
-
-    await new Promise((resolve, reject) => {
-      task.on('state_changed',
-        snap => { fill.style.width = ((snap.bytesTransferred / snap.totalBytes) * 100) + '%'; },
-        reject,
-        resolve
-      );
+    // 把檔案讀成 base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
     });
 
-    // ✅ 上傳成功：記錄用量
-    await addUpload(file.size);
+    fill.style.width = '40%';
 
-    const url = await getDownloadURL(fileRef);
+    // 送給 Apps Script
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'upload',
+        fileName: `${Date.now()}_${file.name}`,
+        fileData: base64,
+        mimeType: file.type || 'application/octet-stream'
+      })
+    });
+
+    fill.style.width = '80%';
+    const result = await res.json();
+
+    if (!result.ok) throw new Error(result.error || '上傳失敗');
+
+    const { fileId, downloadUrl } = result;
+
+    // 記錄到 Firebase DB（讓別人看得到這則訊息）
     await push(dbRef(db, 'dms/' + dmRoomId + '/messages'), {
       uid: myUid, nick: myNick,
-      type: 'file', fileName: file.name, url,
+      type: 'file',
+      fileName: file.name,
+      url: downloadUrl,
+      fileId,
       fileSize: file.size,
       ts: serverTimestamp()
     });
+
+    // 記錄 fileId 到 DB，凌晨清空時使用
+    await push(dbRef(db, 'driveFiles/' + myUid), {
+      fileId, ts: serverTimestamp()
+    });
+
+    await addUpload(file.size);
+    fill.style.width = '100%';
     toast('✅ 檔案傳送成功！');
+    document.getElementById('file-preview-name').textContent = '';
+
   } catch (err) {
-    console.error(err);
-    toast('上傳失敗：' + err.message);
+    console.error('Upload error:', err);
+    toast('❌ 上傳失敗：' + err.message);
+    document.getElementById('file-preview-name').textContent = '';
   } finally {
     btn.disabled = false;
-    progressBar.style.display = 'none';
-    fill.style.width = '0%';
+    setTimeout(() => {
+      progressBar.style.display = 'none';
+      fill.style.width = '0%';
+    }, 800);
   }
+}
+
+// ── 凌晨清空：通知 Apps Script 刪除所有今日上傳的檔案 ──
+async function deleteMyDriveFiles() {
+  const snap = await get(dbRef(db, 'driveFiles/' + myUid));
+  if (!snap.exists()) return;
+
+  const fileIds = Object.values(snap.val()).map(f => f.fileId).filter(Boolean);
+  if (fileIds.length === 0) return;
+
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', fileIds })
+    });
+  } catch(e) {
+    console.warn('Drive delete skipped:', e.message);
+  }
+
+  await set(dbRef(db, 'driveFiles/' + myUid), null);
+}
+
+// ── 初始化 ──
+function setupDriveUpload() {
+  const input = document.getElementById('dm-file-input');
+  if (input) input.addEventListener('change', onDriveFileSelected);
 }
 
 // ════════════════════════════════════════════════════
