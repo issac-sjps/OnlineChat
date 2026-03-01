@@ -806,7 +806,8 @@ body {
 <div id="login-modal" class="hide">
   <div class="login-box">
     <div class="login-title">💬 ChatRoom</div>
-    <div class="login-sub">登入 Google 以保留你的發言紀錄和統計<br>或以訪客身份匿名使用</div>
+    <div class="login-sub">登入 Google 以保留發言紀錄和統計<br>或以訪客身份匿名使用</div>
+    <div id="login-google-hint" style="font-size:0.78rem;color:var(--accent);margin-bottom:12px;min-height:18px"></div>
     <button class="btn-google" id="btn-google-login">
       <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
       使用 Google 登入
@@ -1731,45 +1732,40 @@ function waitForConnectionThenEnter() {
 const googleProvider = new GoogleAuthProvider();
 let isGoogleUser = false;
 
+function doUIDMigration(uid) {
+  const savedUid = localStorage.getItem('savedUid');
+  if (savedUid && savedUid !== uid) {
+    const oldNick  = localStorage.getItem('chatNick_' + savedUid);
+    const oldColor = localStorage.getItem('avatarColor_' + savedUid);
+    if (oldNick && !localStorage.getItem('chatNick_' + uid))
+      localStorage.setItem('chatNick_' + uid, oldNick);
+    if (oldColor && !localStorage.getItem('avatarColor_' + uid))
+      localStorage.setItem('avatarColor_' + uid, oldColor);
+  }
+  localStorage.setItem('savedUid', uid);
+}
+
 onAuthStateChanged(auth, user => {
   if (authHandled) return;
-  if (user) {
+  hideLoading();
+  if (user && !user.isAnonymous) {
+    // ── Google 用戶：直接進入 ──
     authHandled = true;
     myUid = user.uid;
-    isGoogleUser = !user.isAnonymous;
-
-    // 如果是 Google 用戶，用 Google displayName 當預設暱稱
-    if (isGoogleUser && user.displayName) {
-      const existing = localStorage.getItem('chatNick_' + myUid);
-      if (!existing) localStorage.setItem('chatNick_' + myUid, user.displayName);
-    }
-
-    // UID 遷移（匿名用戶換 UID 時保留暱稱）
-    const savedUid = localStorage.getItem('savedUid');
-    if (savedUid && savedUid !== myUid) {
-      const oldNick  = localStorage.getItem('chatNick_' + savedUid);
-      const oldColor = localStorage.getItem('avatarColor_' + savedUid);
-      if (oldNick && !localStorage.getItem('chatNick_' + myUid)) {
-        localStorage.setItem('chatNick_' + myUid, oldNick);
-      }
-      if (oldColor && !localStorage.getItem('avatarColor_' + myUid)) {
-        localStorage.setItem('avatarColor_' + myUid, oldColor);
-      }
-    }
-    localStorage.setItem('savedUid', myUid);
-
-    // 顯示登出按鈕（Google 用戶才顯示）
-    if (isGoogleUser) {
-      const signoutBtn = document.getElementById('signout-btn');
-      if (signoutBtn) signoutBtn.style.display = '';
-    }
-
+    isGoogleUser = true;
+    if (user.displayName && !localStorage.getItem('chatNick_' + myUid))
+      localStorage.setItem('chatNick_' + myUid, user.displayName);
+    doUIDMigration(myUid);
     document.getElementById('login-modal').classList.add('hide');
     waitForConnectionThenEnter();
   } else {
-    // 沒有 session，顯示登入畫面
-    hideLoading();
+    // ── 匿名或未登入：顯示登入畫面 ──
+    // 把目前匿名 user 存起來，讓「繼續匿名」按鈕可以用
+    window._pendingAnonUser = user || null;
     document.getElementById('login-modal').classList.remove('hide');
+    // 更新按鈕文字
+    const anonBtn = document.getElementById('btn-anon-login');
+    if (anonBtn) anonBtn.textContent = user ? '👤 繼續匿名使用' : '👤 匿名訪客進入';
   }
 });
 
@@ -1785,9 +1781,19 @@ document.getElementById('btn-google-login').addEventListener('click', async () =
 
 // 匿名訪客按鈕
 document.getElementById('btn-anon-login').addEventListener('click', () => {
-  signInAnonymously(auth).catch(err => {
-    toast('連線失敗：' + err.message);
-  });
+  if (window._pendingAnonUser) {
+    // 已有匿名 session，直接進入
+    authHandled = true;
+    myUid = window._pendingAnonUser.uid;
+    isGoogleUser = false;
+    doUIDMigration(myUid);
+    document.getElementById('login-modal').classList.add('hide');
+    waitForConnectionThenEnter();
+  } else {
+    signInAnonymously(auth).catch(err => {
+      toast('連線失敗：' + err.message);
+    });
+  }
 });
 
 function showNickModal() {
@@ -1839,7 +1845,10 @@ function enterChat() {
   const statsBtn = document.getElementById('stats-btn');
   if (statsBtn) statsBtn.addEventListener('click', openStats);
   const signoutBtn = document.getElementById('signout-btn');
-  if (signoutBtn) signoutBtn.addEventListener('click', doSignOut);
+  if (signoutBtn) {
+    signoutBtn.style.display = isGoogleUser ? '' : 'none';
+    signoutBtn.addEventListener('click', doSignOut);
+  }
   const myAvatarEl = document.getElementById('my-avatar');
   if (myAvatarEl) myAvatarEl.addEventListener('click', openSettings);
 }
