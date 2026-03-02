@@ -984,6 +984,8 @@ body {
     <div class="modal-title" style="margin-bottom:16px">⚙️ 個人設定</div>
     <div style="font-size:0.78rem;color:var(--muted);margin-bottom:6px">修改暱稱</div>
     <input class="modal-input" id="settings-nick" type="text" placeholder="新暱稱" maxlength="20" autocomplete="off" style="margin-bottom:14px">
+    <div style="font-size:0.78rem;color:var(--muted);margin-bottom:6px">自訂頭像文字（最多2字）</div>
+    <input class="modal-input" id="settings-avatar-text" type="text" placeholder="留空則使用暱稱縮寫" maxlength="2" autocomplete="off" style="margin-bottom:14px">
     <div style="font-size:0.78rem;color:var(--muted);margin-bottom:8px">更換頭像顏色</div>
     <div id="settings-color-picker" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px"></div>
     <div style="display:flex;gap:8px">
@@ -1097,6 +1099,12 @@ function avatarColor(uid) {
   let h = 0;
   for (let c of uid) h = (h * 31 + c.charCodeAt(0)) & 0xffffff;
   return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+function getAvatarText(uid, name) {
+  // 優先用自訂文字
+  const custom = localStorage.getItem('avatarText_' + (uid || ''));
+  if (custom && custom.trim()) return custom.trim().slice(0, 2);
+  return (name || '?').slice(0, 2).toUpperCase();
 }
 function initials(name) { return (name || '?').slice(0, 2).toUpperCase(); }
 function formatTime(ts) {
@@ -1661,6 +1669,17 @@ async function doSignOut() {
 document.getElementById('settings-cancel').addEventListener('click', () => {
   document.getElementById('settings-modal').style.display = 'none';
 });
+// 開啟設定時填入目前的頭像文字
+function openSettings() {
+  const modal = document.getElementById('settings-modal');
+  modal.style.display = 'flex';
+  const avatarTextInput = document.getElementById('settings-avatar-text');
+  if (avatarTextInput) {
+    avatarTextInput.value = localStorage.getItem('avatarText_' + myUid) || '';
+  }
+  initSettingsColorPicker();
+}
+
 document.getElementById('settings-save').addEventListener('click', async () => {
   const newNick = document.getElementById('settings-nick').value.trim();
   const oldNick = myNick;
@@ -1823,7 +1842,7 @@ function submitNick() {
 function enterChat() {
   const myColor = avatarColor(myUid);
   const myAvEl = document.getElementById('my-avatar');
-  myAvEl.textContent = initials(myNick);
+  myAvEl.textContent = getAvatarText(myUid, myNick);
   myAvEl.style.background = myColor;
   document.getElementById('my-name-display').textContent = myNick;
 
@@ -1987,7 +2006,7 @@ function listenUsers() {
       const uColor = (uid === myUid ? avatarColor(uid) : (info.color || avatarColor(uid)));
       // pointer-events:none 讓子元素不攔截 click，全部冒泡到 div
       div.innerHTML = `
-        <div class="user-avatar" style="background:${uColor};pointer-events:none">${initials(info.nick)}
+        <div class="user-avatar" style="background:${uColor};pointer-events:none">${getAvatarText(uid, info.nick)}
           <div class="avatar-dot" style="pointer-events:none"></div>
         </div>
         <div class="user-name${isMe ? ' you' : ''}" style="pointer-events:none">${escapeHtml(info.nick)}${isMe ? ' (我)' : ''}</div>
@@ -2039,7 +2058,7 @@ function renderGlobalMsg(msg, container, snap_key) {
     av.style.background = avatarColor(msg.uid);
     av.style.cursor = 'pointer';
     av.title = `私訊 ${msg.nick}`;
-    av.textContent = initials(msg.nick);
+    av.textContent = getAvatarText(msg.uid, msg.nick);
     av.addEventListener('click', () => openDM(msg.uid, msg.nick));
     div.appendChild(av);
   }
@@ -2184,7 +2203,7 @@ function renderDMMsg(msg, container) {
   const isSelf = msg.uid === myUid;
   const div = document.createElement('div');
   div.className = 'msg-row ' + (isSelf ? 'self' : 'other');
-  const avatarHtml = isSelf ? '' : `<div class="msg-avatar" style="background:${avatarColor(msg.uid)}">${initials(msg.nick)}</div>`;
+  const avatarHtml = isSelf ? '' : `<div class="msg-avatar" style="background:${avatarColor(msg.uid)}">${getAvatarText(msg.uid, msg.nick)}</div>`;
   const nameHtml = isSelf ? '' : `<span class="msg-author" style="color:${avatarColor(msg.uid)}">${escapeHtml(msg.nick)}</span>`;
   let bubbleHtml;
   if (msg.type === 'file') {
@@ -2192,7 +2211,8 @@ function renderDMMsg(msg, container) {
         <div class="file-icon">📄</div>
         <div class="file-info">
           <div class="file-name">${escapeHtml(msg.fileName)}</div>
-          <span class="file-dl" style="cursor:pointer" onclick="trackDownloadAndOpen('${msg.url}', ${msg.fileSize || 0})">下載 ↓</span>
+          <a class="file-dl" href="${msg.url}" target="_blank" rel="noopener" onclick="if(${msg.fileSize||0}>0)addDownload(${msg.fileSize||0})">⬇ 開啟</a>
+          <a class="file-dl" href="${msg.url.replace('view','uc?export=download&id=').replace('https://drive.google.com/file/d/','https://drive.google.com/uc?export=download&id=').replace('/view','')}" target="_blank" rel="noopener" style="margin-left:8px;color:var(--accent2)">💾 下載</a>
         </div>
       </div>`;
   } else {
@@ -2327,14 +2347,15 @@ async function uploadViaAppsScript(file) {
 
     if (!result.ok) throw new Error(result.error || '上傳失敗');
 
-    const { fileId, downloadUrl } = result;
+    const { fileId, downloadUrl, viewUrl } = result;
+    const finalUrl = viewUrl || downloadUrl;  // 優先用 viewUrl
 
     // 記錄到 Firebase DB（讓別人看得到這則訊息）
     await push(dbRef(db, 'dms/' + dmRoomId + '/messages'), {
       uid: myUid, nick: myNick,
       type: 'file',
       fileName: file.name,
-      url: downloadUrl,
+      url: finalUrl,
       fileId,
       fileSize: file.size,
       ts: serverTimestamp()
