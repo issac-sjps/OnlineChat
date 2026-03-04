@@ -242,10 +242,7 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
     <div class="panel-header"><div class="panel-logo">ChatRoom</div></div>
     <div class="panel-section">在線用戶 (<span id="online-count">0</span>)</div>
     <div class="user-list" id="user-list"></div>
-    <div style="padding:10px 14px 8px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:7px">
-      <div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:0.68rem;color:var(--muted)">⬆ 今日上傳</span><span id="upload-label" style="font-size:0.68rem;color:var(--muted)">讀取中…</span></div><div style="height:4px;background:var(--border);border-radius:99px;overflow:hidden"><div id="upload-bar-fill" style="height:100%;width:0%;border-radius:99px;transition:width 0.4s,background 0.3s"></div></div></div>
-      <div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:0.68rem;color:var(--muted)">⬇ 今日下載</span><span id="download-label" style="font-size:0.68rem;color:var(--muted)">0 B / 1 GB</span></div><div style="height:4px;background:var(--border);border-radius:99px;overflow:hidden"><div id="download-bar-fill" style="height:100%;width:0%;border-radius:99px;transition:width 0.4s,background 0.3s"></div></div></div>
-    </div>
+
     <div class="my-info">
       <div class="user-avatar" id="my-avatar" style="background:#1e3a5f;cursor:pointer" title="點擊開啟設定"></div>
       <div style="flex:1;min-width:0"><div class="my-name" id="my-name-display">—</div><div class="my-status">● 在線</div></div>
@@ -378,7 +375,7 @@ const isMobile = () => window.innerWidth<=768;
 const dateKey = () => new Date(Date.now()+8*60*60*1000).toISOString().slice(0,10);
 const fmtBytes = b => b>=1073741824?(b/1073741824).toFixed(2)+' GB':b>=1048576?(b/1048576).toFixed(1)+' MB':b>=1024?(b/1024).toFixed(0)+' KB':b+' B';
 const barColor = pct => pct>=90?'#f87171':pct>=60?'#fbbf24':'#22d3ee';
-const isQuotaExceeded = () => todayUploadBytes>=UPLOAD_LIMIT_BYTES;
+const isQuotaExceeded = () => false; // 無限空間，不限制
 
 function toast(msg,duration=3000){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),duration);}
 
@@ -559,7 +556,7 @@ async function openStats(){
   document.getElementById('stats-modal').classList.add('show');
   await loadStats();
 }
-function closeStats(){document.getElementById('stats-modal').classList.remove('show');}
+window.closeStats=function(){document.getElementById('stats-modal').classList.remove('show');};function closeStats(){window.closeStats();}
 async function loadStats(){
   let msgCount=0,fileCount=0;const hourMap={},emojiMap={};
   const gs=await get(dbRef(db,'global/messages'));
@@ -652,7 +649,7 @@ function enterChat(){
   const av=document.getElementById('my-avatar');
   av.textContent=getAvatarText(myUid,myNick);av.style.background=avatarColor(myUid);
   document.getElementById('my-name-display').textContent=myNick;
-  loadQuota();startClock();setupDriveUpload();setupNotifications();setupEmojiButtons();
+  startClock();setupDriveUpload();setupNotifications();setupEmojiButtons(); // quota 已移除
   renderDMConvList();bindMobNav();setupPresence();listenGlobal();listenUsers();setupGlobalInput();
   const sb=document.getElementById('settings-btn');if(sb)sb.addEventListener('click',openSettings);
   const stb=document.getElementById('stats-btn');if(stb)stb.addEventListener('click',openStats);
@@ -796,7 +793,7 @@ async function sendDM(){
 
 // ── File Upload ──
 function checkBeforeUpload(){
-  if(isQuotaExceeded()){toast('🔒 今日上傳已達上限');return false;}
+
   if(!dmRoomId){toast('⚠️ 請先點選對話對象再傳送檔案');return false;}
   return true;
 }
