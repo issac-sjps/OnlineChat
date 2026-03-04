@@ -10,8 +10,8 @@
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
-/* Login */
-#login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+/* ── Login ── */
+#login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:99}
 #login-screen.hide{display:none}
 .login-card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:48px 40px;width:360px;text-align:center;box-shadow:0 0 80px rgba(34,211,238,0.08)}
 .login-logo{font-size:1.8rem;font-weight:800;margin-bottom:6px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
@@ -21,79 +21,125 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .btn-google img{width:20px;height:20px}
 .login-hint{margin-top:16px;font-size:0.78rem;color:var(--muted)}
 
-/* Denied */
-#denied-screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:var(--bg)}
+/* ── Denied ── */
+#denied-screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:var(--bg);z-index:99}
 #denied-screen.show{display:flex}
 .denied-card{background:var(--bg2);border:1px solid var(--danger);border-radius:20px;padding:40px;text-align:center;width:340px}
 .denied-icon{font-size:3rem;margin-bottom:16px}
 .denied-title{font-size:1.2rem;font-weight:700;color:var(--danger);margin-bottom:8px}
 .denied-sub{color:var(--muted);font-size:0.85rem;margin-bottom:24px}
-.btn-logout{padding:10px 24px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;font-size:0.85rem}
+.btn-back{padding:10px 24px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);cursor:pointer;font-size:0.85rem}
 
-/* Main */
+/* ── Main ── */
 #main{display:none;flex-direction:column;min-height:100vh}
 #main.show{display:flex}
 
-/* Topbar */
+/* ── Topbar ── */
 .topbar{padding:0 24px;height:60px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
 .topbar-logo{font-size:1.1rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.topbar-right{display:flex;align-items:center;gap:16px}
-.admin-tag{background:rgba(34,211,238,0.1);border:1px solid var(--accent);color:var(--accent);font-size:0.72rem;font-weight:700;padding:3px 10px;border-radius:99px;letter-spacing:0.5px}
+.topbar-right{display:flex;align-items:center;gap:14px}
+.admin-tag{background:rgba(34,211,238,0.1);border:1px solid var(--accent);color:var(--accent);font-size:0.72rem;font-weight:700;padding:3px 10px;border-radius:99px}
 .btn-signout{padding:7px 14px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);cursor:pointer;font-size:0.82rem;transition:all 0.15s}
 .btn-signout:hover{border-color:var(--danger);color:var(--danger)}
 
-/* Stats bar */
-.stats-bar{padding:16px 24px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;gap:20px;flex-wrap:wrap}
-.stat-chip{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 18px;text-align:center;min-width:100px}
-.stat-chip .n{font-size:1.6rem;font-weight:800;color:var(--accent)}
-.stat-chip .l{font-size:0.7rem;color:var(--muted);margin-top:2px}
+/* ── Stats ── */
+.stats-bar{padding:14px 24px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap}
+.stat-chip{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 18px;text-align:center;min-width:90px}
+.stat-chip .n{font-size:1.5rem;font-weight:800;color:var(--accent)}
+.stat-chip .l{font-size:0.68rem;color:var(--muted);margin-top:2px}
 
-/* Filters */
-.filters{padding:16px 24px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border)}
-.filter-btn{padding:6px 16px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:0.82rem;font-family:inherit;transition:all 0.15s}
+/* ── Filters ── */
+.filters{padding:14px 24px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:60px;z-index:9}
+.filter-btn{padding:6px 14px;border-radius:99px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:0.8rem;font-family:inherit;transition:all 0.15s}
 .filter-btn:hover{border-color:var(--accent);color:var(--accent)}
 .filter-btn.active{background:rgba(34,211,238,0.12);border-color:var(--accent);color:var(--accent)}
-.search-input{padding:6px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:99px;color:var(--text);font-size:0.82rem;font-family:inherit;outline:none;width:220px;transition:border-color 0.2s}
+.view-toggle{display:flex;gap:0;margin-left:8px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.view-btn{padding:6px 14px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:0.8rem;font-family:inherit;transition:all 0.15s}
+.view-btn:hover{background:rgba(255,255,255,0.05);color:var(--text)}
+.view-btn.active{background:rgba(129,140,248,0.15);color:var(--accent2)}
+.search-input{padding:6px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:99px;color:var(--text);font-size:0.8rem;font-family:inherit;outline:none;width:200px;transition:border-color 0.2s}
 .search-input:focus{border-color:var(--accent)}
-.btn-refresh{margin-left:auto;padding:6px 16px;background:var(--accent);color:#000;border:none;border-radius:99px;font-size:0.82rem;font-weight:700;cursor:pointer;transition:opacity 0.2s}
+.btn-refresh{margin-left:auto;padding:6px 14px;background:var(--accent);color:#000;border:none;border-radius:99px;font-size:0.8rem;font-weight:700;cursor:pointer;transition:opacity 0.2s}
 .btn-refresh:hover{opacity:0.85}
 
-/* Message list */
-.msg-list{padding:20px 24px;display:flex;flex-direction:column;gap:10px}
+/* ── Content area ── */
+.content{padding:20px 24px;display:flex;flex-direction:column;gap:10px}
+
+/* ── Message cards ── */
 .msg-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;transition:border-color 0.15s}
 .msg-card:hover{border-color:rgba(255,255,255,0.15)}
 .msg-card.recalled{border-color:rgba(248,113,113,0.3);background:rgba(248,113,113,0.03)}
-.msg-card.file-msg{border-color:rgba(129,140,248,0.3)}
+.msg-card.file-type{border-color:rgba(129,140,248,0.3)}
 .msg-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
-.msg-avatar-sm{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0}
+.av-sm{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0}
 .msg-nick{font-size:0.85rem;font-weight:600}
-.msg-email{font-size:0.72rem;color:var(--muted)}
-.msg-time-full{font-size:0.72rem;color:var(--muted);margin-left:auto}
-.tag{font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:99px;letter-spacing:0.5px}
+.msg-uid{font-size:0.65rem;color:var(--muted)}
+.msg-time-r{font-size:0.72rem;color:var(--muted);margin-left:auto;white-space:nowrap}
+.tag{font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:99px}
 .tag-recalled{background:rgba(248,113,113,0.15);color:var(--danger);border:1px solid rgba(248,113,113,0.3)}
 .tag-global{background:rgba(34,211,238,0.1);color:var(--accent);border:1px solid rgba(34,211,238,0.2)}
 .tag-dm{background:rgba(129,140,248,0.1);color:var(--accent2);border:1px solid rgba(129,140,248,0.2)}
 .tag-file{background:rgba(251,191,36,0.1);color:var(--warn);border:1px solid rgba(251,191,36,0.2)}
-.msg-text{font-size:0.88rem;line-height:1.6;color:var(--text);background:var(--bg);padding:10px 14px;border-radius:8px;word-break:break-word}
-.msg-text.is-recalled{color:var(--danger);font-style:italic}
-.msg-recalled-badge{font-size:0.75rem;color:var(--danger);margin-top:6px;display:flex;align-items:center;gap:4px}
+.msg-body{font-size:0.88rem;line-height:1.6;background:var(--bg);padding:10px 14px;border-radius:8px;word-break:break-word}
+.msg-body.recalled-text{color:var(--danger);font-style:italic}
 .msg-actions{margin-top:10px;display:flex;gap:8px}
-.btn-action{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:0.78rem;font-family:inherit;transition:all 0.15s}
-.btn-action:hover{border-color:var(--accent);color:var(--accent)}
-.btn-action.danger:hover{border-color:var(--danger);color:var(--danger)}
-.btn-action.restore:hover{border-color:var(--online);color:var(--online)}
+.btn-act{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:0.78rem;font-family:inherit;transition:all 0.15s}
+.btn-act.restore:hover{border-color:var(--online);color:var(--online)}
+.btn-act.danger:hover{border-color:var(--danger);color:var(--danger)}
 
-/* DM room label */
-.dm-room-label{font-size:0.72rem;color:var(--accent2);margin-top:4px}
+/* ── Room cards (房間模式) ── */
+.room-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s;cursor:pointer}
+.room-card:hover{border-color:var(--accent2);box-shadow:0 0 20px rgba(129,140,248,0.1)}
+.room-header{padding:16px 20px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border)}
+.room-avatars{display:flex;flex-direction:row}
+.room-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;border:2px solid var(--bg2)}
+.room-av:not(:first-child){margin-left:-10px}
+.room-info{flex:1;min-width:0}
+.room-title{font-size:0.95rem;font-weight:700;margin-bottom:3px}
+.room-title span{color:var(--accent2)}
+.room-meta{font-size:0.72rem;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+.room-badges{display:flex;gap:6px;margin-left:auto;flex-shrink:0}
+.room-badge{font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:99px}
+.room-badge.count{background:rgba(34,211,238,0.1);color:var(--accent);border:1px solid rgba(34,211,238,0.2)}
+.room-badge.recalled{background:rgba(248,113,113,0.15);color:var(--danger);border:1px solid rgba(248,113,113,0.3)}
+.room-preview{padding:12px 20px;font-size:0.82rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-top:1px solid var(--border);background:rgba(0,0,0,0.15)}
+.room-expand-btn{width:100%;padding:10px;background:none;border:none;border-top:1px solid var(--border);color:var(--accent2);cursor:pointer;font-size:0.8rem;font-family:inherit;transition:background 0.15s}
+.room-expand-btn:hover{background:rgba(129,140,248,0.06)}
 
-/* Empty */
-.empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:0.9rem}
+/* ── Room detail overlay ── */
+#room-detail{display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+#room-detail.show{display:flex}
+.room-detail-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;width:100%;max-width:720px;overflow:hidden;margin:auto}
+.room-detail-topbar{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;position:sticky;top:0;background:var(--bg2);z-index:1}
+.room-detail-title{font-size:1rem;font-weight:700;flex:1}
+.btn-close-detail{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;padding:4px;border-radius:6px;transition:color 0.15s}
+.btn-close-detail:hover{color:var(--text)}
+.room-detail-msgs{padding:16px 20px;display:flex;flex-direction:column;gap:8px}
+
+/* ── Inline DM bubbles in detail ── */
+.dm-bubble-row{display:flex;gap:8px;align-items:flex-end;max-width:85%}
+.dm-bubble-row.me{flex-direction:row-reverse;margin-left:auto}
+.dm-bubble-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0}
+.dm-bubble-content{display:flex;flex-direction:column;gap:2px}
+.dm-bubble-row.me .dm-bubble-content{align-items:flex-end}
+.dm-bubble-name{font-size:0.7rem;color:var(--muted);padding:0 4px}
+.dm-bubble{padding:8px 12px;border-radius:14px;font-size:0.85rem;line-height:1.5;word-break:break-word;max-width:360px}
+.dm-bubble-row:not(.me) .dm-bubble{background:var(--bg3);border-bottom-left-radius:4px}
+.dm-bubble-row.me .dm-bubble{background:#1e3a5f;border-bottom-right-radius:4px}
+.dm-bubble.is-recalled{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);color:var(--danger);font-style:italic}
+.dm-bubble-time{font-size:0.65rem;color:var(--muted);padding:0 4px}
+.dm-bubble-actions{display:flex;gap:4px;margin-top:2px}
+.dm-bubble-act{padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:0.7rem;font-family:inherit;transition:all 0.15s;opacity:0}
+.dm-bubble-row:hover .dm-bubble-act{opacity:1}
+.dm-bubble-act.restore:hover{border-color:var(--online);color:var(--online)}
+.dm-bubble-act.danger:hover{border-color:var(--danger);color:var(--danger)}
+
+/* ── Empty / Loading ── */
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
 .empty-icon{font-size:3rem;margin-bottom:12px}
-
-/* Loading */
 .loading{text-align:center;padding:40px;color:var(--muted);font-size:0.85rem}
 
-/* Toast */
+/* ── Toast ── */
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--bg2);border:1px solid var(--border);padding:10px 18px;border-radius:8px;font-size:0.85rem;opacity:0;transition:all 0.3s;pointer-events:none;z-index:999}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -109,7 +155,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
       <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
       使用 Google 帳號登入
     </button>
-    <div class="login-hint">🔒 僅 issac@sjps.kh.edu.tw 可存取</div>
+    <div class="login-hint">🔒 僅限指定管理員帳號</div>
   </div>
 </div>
 
@@ -119,7 +165,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <div class="denied-icon">🚫</div>
     <div class="denied-title">存取被拒絕</div>
     <div class="denied-sub" id="denied-email">你的帳號沒有管理員權限</div>
-    <button class="btn-logout" id="btn-denied-logout">登出並返回</button>
+    <button class="btn-back" id="btn-denied-logout">登出並返回</button>
   </div>
 </div>
 
@@ -129,7 +175,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <div class="topbar-logo">🛡️ ChatRoom Admin</div>
     <div class="topbar-right">
       <span class="admin-tag">ADMIN</span>
-      <span id="admin-email" style="font-size:0.8rem;color:var(--muted)"></span>
+      <span id="admin-email" style="font-size:0.78rem;color:var(--muted)"></span>
       <button class="btn-signout" id="btn-signout">登出</button>
     </div>
   </div>
@@ -139,20 +185,38 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
     <div class="stat-chip"><div class="n" id="st-recalled" style="color:var(--danger)">—</div><div class="l">已收回</div></div>
     <div class="stat-chip"><div class="n" id="st-global" style="color:var(--accent)">—</div><div class="l">大廳</div></div>
     <div class="stat-chip"><div class="n" id="st-dm" style="color:var(--accent2)">—</div><div class="l">私訊</div></div>
+    <div class="stat-chip"><div class="n" id="st-rooms" style="color:var(--warn)">—</div><div class="l">私訊房間</div></div>
     <div class="stat-chip"><div class="n" id="st-users" style="color:var(--online)">—</div><div class="l">用戶數</div></div>
   </div>
 
   <div class="filters">
     <button class="filter-btn active" data-filter="recalled">🔴 收回訊息</button>
-    <button class="filter-btn" data-filter="all">📋 全部訊息</button>
+    <button class="filter-btn" data-filter="all">📋 全部</button>
     <button class="filter-btn" data-filter="global">💬 大廳</button>
-    <button class="filter-btn" data-filter="dm">📩 私訊</button>
-    <input class="search-input" id="search-input" placeholder="搜尋暱稱或內容…" type="text">
+    <button class="filter-btn" data-filter="dm">📩 私訊（列表）</button>
+    <button class="filter-btn" data-filter="rooms">🏠 私訊（房間）</button>
+    <div class="view-toggle" id="view-toggle" style="display:none">
+      <button class="view-btn active" data-view="all" title="顯示全部">全部</button>
+      <button class="view-btn" data-view="recalled" title="只看收回">收回</button>
+    </div>
+    <input class="search-input" id="search-input" placeholder="搜尋暱稱或內容…">
     <button class="btn-refresh" id="btn-refresh">⟳ 重新載入</button>
   </div>
 
-  <div class="msg-list" id="msg-list">
+  <div class="content" id="content">
     <div class="loading">載入中…</div>
+  </div>
+</div>
+
+<!-- Room detail overlay -->
+<div id="room-detail">
+  <div class="room-detail-box">
+    <div class="room-detail-topbar">
+      <button class="btn-close-detail" id="close-detail">✕</button>
+      <div class="room-detail-title" id="detail-title">—</div>
+      <div id="detail-stats" style="font-size:0.75rem;color:var(--muted)"></div>
+    </div>
+    <div class="room-detail-msgs" id="detail-msgs"></div>
   </div>
 </div>
 
@@ -165,6 +229,8 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
 import { getDatabase, ref as dbRef, get, update, remove }
   from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
 
+const ADMIN_EMAILS = ['issac@sjps.kh.edu.tw'];
+
 const firebaseConfig = {
   apiKey: "AIzaSyCsjUt0p8q0lV5ThMnAfJva60YkvfP-jlk",
   authDomain: "onlinechat-aa697.firebaseapp.com",
@@ -175,233 +241,357 @@ const firebaseConfig = {
   databaseURL: "https://onlinechat-aa697-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
-// ── 管理員白名單（email）──
-const ADMIN_EMAILS = ['issac@sjps.kh.edu.tw'];
-
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getDatabase(app);
-const googleProvider = new GoogleAuthProvider();
+const gp   = new GoogleAuthProvider();
 
-let allMessages = [];   // 所有訊息的快取
+// ── State ──
+let allMessages = [];
+let allRooms    = {};   // { roomId: { members:{uid:nick}, msgs:[] } }
+let nickMap     = {};   // uid -> nick (從所有訊息裡收集)
 let currentFilter = 'recalled';
+let roomDetailFilter = 'all';
 let searchQuery = '';
 
 // ── Utility ──
-function toast(msg, dur=3000){
-  const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'),dur);
-}
-function escapeHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function toast(msg,dur=3000){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),dur);}
 function formatFull(ts){
   if(!ts)return '—';
   const d=new Date(ts+8*60*60*1000);
-  return `${d.getUTCFullYear()}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${String(d.getUTCDate()).padStart(2,'0')} ${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}:${String(d.getUTCSeconds()).padStart(2,'0')}`;
+  return `${d.getUTCFullYear()}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${String(d.getUTCDate()).padStart(2,'0')} ${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
 }
-const AVATAR_COLORS=['#ef4444','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#f43f5e','#10b981','#6366f1','#f59e0b','#84cc16','#0ea5e9'];
-function avatarColor(uid){let h=0;for(let c of (uid||''))h=(h*31+c.charCodeAt(0))&0xffffff;return AVATAR_COLORS[Math.abs(h)%AVATAR_COLORS.length];}
+function formatTime(ts){if(!ts)return '';const d=new Date(ts+8*60*60*1000);return `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;}
+const COLORS=['#ef4444','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#f43f5e','#10b981','#6366f1','#f59e0b','#84cc16','#0ea5e9'];
+function avatarColor(uid){let h=0;for(const c of(uid||''))h=(h*31+c.charCodeAt(0))&0xffffff;return COLORS[Math.abs(h)%COLORS.length];}
 function initials(name){return(name||'?').slice(0,2).toUpperCase();}
 
 // ── Auth ──
-onAuthStateChanged(auth, user => {
-  if(!user){
-    show('login-screen'); hide('main'); hide('denied-screen'); return;
-  }
-  const email = user.email || '';
-  if(ADMIN_EMAILS.includes(email)){
-    // 管理員
-    hide('login-screen'); hide('denied-screen'); show('main');
-    document.getElementById('admin-email').textContent = email;
+onAuthStateChanged(auth, user=>{
+  if(!user){ showEl('login-screen'); hideEl('main'); hideEl('denied-screen'); return; }
+  if(ADMIN_EMAILS.includes(user.email||'')){
+    hideEl('login-screen'); hideEl('denied-screen'); showEl('main');
+    document.getElementById('admin-email').textContent = user.email;
     loadAll();
   } else {
-    // 不是管理員
-    hide('login-screen'); hide('main'); show('denied-screen');
-    document.getElementById('denied-email').textContent = `登入帳號：${email}`;
+    hideEl('login-screen'); hideEl('main'); showEl('denied-screen');
+    document.getElementById('denied-email').textContent = `登入帳號：${user.email}`;
   }
 });
+function showEl(id){const el=document.getElementById(id);if(id==='main'||id==='denied-screen')el.classList.add('show');else el.classList.remove('hide');}
+function hideEl(id){const el=document.getElementById(id);if(id==='main'||id==='denied-screen')el.classList.remove('show');else el.classList.add('hide');}
 
-function show(id){
-  const el=document.getElementById(id);
-  if(el.id==='main') el.classList.add('show');
-  else if(el.id==='denied-screen') el.classList.add('show');
-  else el.classList.remove('hide');
-}
-function hide(id){
-  const el=document.getElementById(id);
-  if(el.id==='main') el.classList.remove('show');
-  else if(el.id==='denied-screen') el.classList.remove('show');
-  else el.classList.add('hide');
-}
+document.getElementById('btn-login').addEventListener('click',async()=>{try{await signInWithPopup(auth,gp);}catch(e){toast('登入失敗：'+e.message);}});
+document.getElementById('btn-signout').addEventListener('click',()=>signOut(auth));
+document.getElementById('btn-denied-logout').addEventListener('click',()=>signOut(auth));
+document.getElementById('btn-refresh').addEventListener('click',()=>loadAll());
 
-document.getElementById('btn-login').addEventListener('click', async()=>{
-  try{ await signInWithPopup(auth, googleProvider); }
-  catch(e){ toast('登入失敗：'+e.message); }
-});
-document.getElementById('btn-signout').addEventListener('click', ()=>signOut(auth));
-document.getElementById('btn-denied-logout').addEventListener('click', ()=>signOut(auth));
-document.getElementById('btn-refresh').addEventListener('click', ()=>loadAll());
-
-// ── Load all messages ──
+// ── Load ──
 async function loadAll(){
-  document.getElementById('msg-list').innerHTML='<div class="loading">📡 載入資料中…</div>';
-  allMessages = [];
+  document.getElementById('content').innerHTML='<div class="loading">📡 載入資料中…</div>';
+  allMessages=[]; allRooms={}; nickMap={};
 
-  // 大廳訊息
-  const globalSnap = await get(dbRef(db,'global/messages'));
-  if(globalSnap.exists()){
-    globalSnap.forEach(child=>{
-      const m=child.val();
-      allMessages.push({ ...m, _key:child.key, _source:'global', _roomId:null });
+  // 大廳
+  const gs=await get(dbRef(db,'global/messages'));
+  if(gs.exists()) gs.forEach(c=>{
+    const m=c.val();
+    allMessages.push({...m,_key:c.key,_source:'global',_roomId:null});
+    if(m.uid&&m.nick) nickMap[m.uid]=m.nick;
+  });
+
+  // 私訊
+  const ds=await get(dbRef(db,'dms'));
+  if(ds.exists()) ds.forEach(room=>{
+    const roomId=room.key;
+    allRooms[roomId]={members:{},msgs:[]};
+    room.child('messages').forEach(c=>{
+      const m=c.val();
+      allMessages.push({...m,_key:c.key,_source:'dm',_roomId:roomId});
+      allRooms[roomId].msgs.push({...m,_key:c.key,_roomId:roomId});
+      if(m.uid&&m.nick){nickMap[m.uid]=m.nick;allRooms[roomId].members[m.uid]=m.nick;}
     });
-  }
+    // 按時間排序
+    allRooms[roomId].msgs.sort((a,b)=>(a.ts||0)-(b.ts||0));
+  });
 
-  // 私訊（掃所有房間）
-  const dmsSnap = await get(dbRef(db,'dms'));
-  if(dmsSnap.exists()){
-    dmsSnap.forEach(room=>{
-      const roomId=room.key;
-      room.child('messages').forEach(child=>{
-        const m=child.val();
-        allMessages.push({ ...m, _key:child.key, _source:'dm', _roomId:roomId });
-      });
-    });
-  }
+  // 用戶
+  const ps=await get(dbRef(db,'presence'));
+  if(ps.exists()) ps.forEach(c=>{const u=c.val();if(u.uid&&u.nick)nickMap[u.uid]=u.nick;});
+  const userCount=ps.exists()?Object.keys(ps.val()).length:0;
 
-  // 用戶列表
-  const presSnap = await get(dbRef(db,'presence'));
-  const userCount = presSnap.exists() ? Object.keys(presSnap.val()).length : 0;
+  // Stats
+  const total=allMessages.length;
+  const recalled=allMessages.filter(m=>m.recalled).length;
+  const globalC=allMessages.filter(m=>m._source==='global').length;
+  const dmC=allMessages.filter(m=>m._source==='dm').length;
+  document.getElementById('st-total').textContent=total;
+  document.getElementById('st-recalled').textContent=recalled;
+  document.getElementById('st-global').textContent=globalC;
+  document.getElementById('st-dm').textContent=dmC;
+  document.getElementById('st-rooms').textContent=Object.keys(allRooms).length;
+  document.getElementById('st-users').textContent=userCount;
 
-  // 統計
-  const total   = allMessages.length;
-  const recalled = allMessages.filter(m=>m.recalled).length;
-  const global  = allMessages.filter(m=>m._source==='global').length;
-  const dm      = allMessages.filter(m=>m._source==='dm').length;
-  document.getElementById('st-total').textContent   = total;
-  document.getElementById('st-recalled').textContent = recalled;
-  document.getElementById('st-global').textContent  = global;
-  document.getElementById('st-dm').textContent      = dm;
-  document.getElementById('st-users').textContent   = userCount;
-
-  // 按時間排序（新→舊）
   allMessages.sort((a,b)=>(b.ts||0)-(a.ts||0));
-
-  renderList();
+  renderContent();
 }
 
-// ── Render ──
-function renderList(){
-  const list = document.getElementById('msg-list');
-  let msgs = allMessages;
+// ── Render dispatcher ──
+function renderContent(){
+  const toggle=document.getElementById('view-toggle');
+  toggle.style.display=currentFilter==='rooms'?'flex':'none';
+  if(currentFilter==='rooms') renderRooms();
+  else renderList();
+}
 
-  // Filter
+// ────────────────────────────────────────────
+//  列表模式
+// ────────────────────────────────────────────
+function renderList(){
+  const content=document.getElementById('content');
+  let msgs=allMessages;
   if(currentFilter==='recalled') msgs=msgs.filter(m=>m.recalled);
   else if(currentFilter==='global') msgs=msgs.filter(m=>m._source==='global');
   else if(currentFilter==='dm') msgs=msgs.filter(m=>m._source==='dm');
+  if(searchQuery){const q=searchQuery.toLowerCase();msgs=msgs.filter(m=>(m.nick||'').toLowerCase().includes(q)||(m.text||'').toLowerCase().includes(q));}
 
-  // Search
-  if(searchQuery){
-    const q=searchQuery.toLowerCase();
-    msgs=msgs.filter(m=>(m.nick||'').toLowerCase().includes(q)||(m.text||'').toLowerCase().includes(q));
+  content.innerHTML='';
+  if(!msgs.length){
+    content.innerHTML=`<div class="empty"><div class="empty-icon">${currentFilter==='recalled'?'✅':'🔍'}</div><div>${currentFilter==='recalled'?'目前沒有已收回的訊息':'找不到符合的訊息'}</div></div>`;
+    return;
+  }
+  msgs.forEach(msg=>content.appendChild(buildMsgCard(msg)));
+}
+
+function buildMsgCard(msg){
+  const card=document.createElement('div');
+  card.className='msg-card'+(msg.recalled?' recalled':'')+(msg.type==='file'?' file-type':'');
+  const color=avatarColor(msg.uid||'');
+  const srcTag=msg._source==='global'?'<span class="tag tag-global">大廳</span>':'<span class="tag tag-dm">私訊</span>';
+  const recTag=msg.recalled?'<span class="tag tag-recalled">已收回</span>':'';
+  const fileTag=msg.type==='file'?'<span class="tag tag-file">檔案</span>':'';
+  const dmRoomLine=msg._source==='dm'&&msg._roomId
+    ?`<div style="font-size:0.7rem;color:var(--accent2);margin-top:2px;margin-bottom:8px">📩 房間：${buildRoomLabel(msg._roomId)}</div>`:'';
+
+  let body='';
+  if(msg.type==='file'){
+    body=`<div class="msg-body">📎 <strong>${esc(msg.fileName)}</strong><br><a href="${msg.url||''}" target="_blank" style="color:var(--accent);font-size:0.8rem">⬇ 開啟</a></div>`;
+  } else if(msg.recalled&&msg.text&&msg.text!=='[訊息已收回]'){
+    body=`<div class="msg-body recalled-text">🔴 原文：${esc(msg.text)}</div>`;
+  } else {
+    body=`<div class="msg-body">${esc(msg.text||'')}</div>`;
   }
 
-  if(!msgs.length){
-    list.innerHTML=`<div class="empty"><div class="empty-icon">${currentFilter==='recalled'?'✅':'🔍'}</div>${currentFilter==='recalled'?'目前沒有已收回的訊息':'找不到符合的訊息'}</div>`;
+  card.innerHTML=`
+    <div class="msg-header">
+      <div class="av-sm" style="background:${color}">${initials(msg.nick)}</div>
+      <div><div class="msg-nick">${esc(msg.nick||'未知')}</div><div class="msg-uid">${msg.uid||''}</div></div>
+      ${srcTag}${recTag}${fileTag}
+      <div class="msg-time-r">${formatFull(msg.ts)}</div>
+    </div>
+    ${dmRoomLine}
+    ${body}
+    <div class="msg-actions"></div>
+  `;
+  const acts=card.querySelector('.msg-actions');
+  if(msg.recalled){
+    const r=document.createElement('button');r.className='btn-act restore';r.textContent='↩ 還原';
+    r.addEventListener('click',()=>restoreMsg(msg));acts.appendChild(r);
+  }
+  const d=document.createElement('button');d.className='btn-act danger';d.textContent='🗑 永久刪除';
+  d.addEventListener('click',()=>deleteMsg(msg));acts.appendChild(d);
+  return card;
+}
+
+function buildRoomLabel(roomId){
+  if(!roomId)return roomId;
+  const room=allRooms[roomId];
+  if(!room)return roomId;
+  const names=Object.values(room.members);
+  return names.length>=2?`${names[0]} vs ${names[1]}`:names[0]||roomId;
+}
+
+// ────────────────────────────────────────────
+//  房間模式
+// ────────────────────────────────────────────
+function renderRooms(){
+  const content=document.getElementById('content');
+  content.innerHTML='';
+
+  let rooms=Object.entries(allRooms);
+
+  // 搜尋：按成員名字篩選
+  if(searchQuery){
+    const q=searchQuery.toLowerCase();
+    rooms=rooms.filter(([,r])=>Object.values(r.members).some(n=>n.toLowerCase().includes(q)));
+  }
+
+  // 依最新訊息排序
+  rooms.sort((a,b)=>{
+    const la=a[1].msgs[a[1].msgs.length-1]?.ts||0;
+    const lb=b[1].msgs[b[1].msgs.length-1]?.ts||0;
+    return lb-la;
+  });
+
+  if(!rooms.length){
+    content.innerHTML='<div class="empty"><div class="empty-icon">📭</div><div>找不到私訊房間</div></div>';
     return;
   }
 
-  list.innerHTML='';
-  msgs.forEach(msg=>{
+  rooms.forEach(([roomId,room])=>{
+    const members=Object.entries(room.members); // [[uid,nick],...]
+    const msgCount=room.msgs.length;
+    const recalledCount=room.msgs.filter(m=>m.recalled).length;
+    const lastMsg=room.msgs[room.msgs.length-1];
+    const lastTime=lastMsg?formatFull(lastMsg.ts):'';
+    const preview=lastMsg?(lastMsg.type==='file'?`📎 ${lastMsg.fileName}`:lastMsg.text||''):'';
+
+    // 顯示兩個人的名字和頭像
+    const [uid1,nick1]=members[0]||['','?'];
+    const [uid2,nick2]=members[1]||['','?'];
+    const c1=avatarColor(uid1),c2=avatarColor(uid2);
+
     const card=document.createElement('div');
-    card.className='msg-card'+(msg.recalled?' recalled':'')+(msg.type==='file'?' file-msg':'');
-
-    const color=avatarColor(msg.uid||'');
-    const srcTag=msg._source==='global'
-      ?'<span class="tag tag-global">大廳</span>'
-      :`<span class="tag tag-dm">私訊</span>`;
-    const recalledTag=msg.recalled?'<span class="tag tag-recalled">已收回</span>':'';
-    const fileTag=msg.type==='file'?'<span class="tag tag-file">檔案</span>':'';
-    const dmRoom=msg._source==='dm'&&msg._roomId
-      ?`<div class="dm-room-label">房間：${msg._roomId}</div>`:'';
-
-    let textContent='';
-    if(msg.type==='file'){
-      textContent=`<div class="msg-text">📎 <strong>${escapeHtml(msg.fileName||'')}</strong><br><a href="${msg.url||''}" target="_blank" style="color:var(--accent);font-size:0.8rem">⬇ 開啟檔案</a></div>`;
-    } else {
-      const isRecalled=msg.recalled;
-      const displayText=isRecalled&&msg.text==='[訊息已收回]'?'（原文已被覆蓋）':escapeHtml(msg.text||'');
-      // 若 recalled 且原文仍在（不等於 [訊息已收回]）顯示原文
-      const actualText=msg.recalled&&msg.text&&msg.text!=='[訊息已收回]'
-        ?`<div class="msg-text is-recalled">🔴 原文：${escapeHtml(msg.text)}</div>`
-        :`<div class="msg-text">${displayText}</div>`;
-      textContent=actualText;
-    }
-
+    card.className='room-card';
     card.innerHTML=`
-      <div class="msg-header">
-        <div class="msg-avatar-sm" style="background:${color}">${initials(msg.nick)}</div>
-        <div>
-          <div class="msg-nick">${escapeHtml(msg.nick||'未知')}</div>
-          <div class="msg-email" style="font-size:0.68rem;color:var(--muted)">${msg.uid||''}</div>
+      <div class="room-header">
+        <div class="room-avatars">
+          <div class="room-av" style="background:${c1}" title="${esc(nick1)}">${initials(nick1)}</div>
+          <div class="room-av" style="background:${c2}" title="${esc(nick2)}">${initials(nick2)}</div>
         </div>
-        ${srcTag}${recalledTag}${fileTag}
-        <div class="msg-time-full">${formatFull(msg.ts)}</div>
+        <div class="room-info">
+          <div class="room-title">${esc(nick1)} <span>vs</span> ${esc(nick2)}</div>
+          <div class="room-meta">
+            <span>🕐 ${lastTime}</span>
+          </div>
+        </div>
+        <div class="room-badges">
+          <span class="room-badge count">${msgCount} 則</span>
+          ${recalledCount>0?`<span class="room-badge recalled">🔴 ${recalledCount} 收回</span>`:''}
+        </div>
       </div>
-      ${dmRoom}
-      ${textContent}
-      <div class="msg-actions" id="actions-${msg._key}"></div>
+      <div class="room-preview">${esc(preview)}</div>
+      <button class="room-expand-btn">📖 查看對話記錄</button>
     `;
-
-    // 動態加按鈕
-    const actions=card.querySelector('.msg-actions');
-    if(msg.recalled){
-      const restoreBtn=document.createElement('button');
-      restoreBtn.className='btn-action restore';restoreBtn.textContent='↩ 還原訊息';
-      restoreBtn.addEventListener('click',()=>restoreMsg(msg));
-      actions.appendChild(restoreBtn);
-    }
-    const delBtn=document.createElement('button');
-    delBtn.className='btn-action danger';delBtn.textContent='🗑 永久刪除';
-    delBtn.addEventListener('click',()=>deleteMsg(msg));
-    actions.appendChild(delBtn);
-
-    list.appendChild(card);
+    card.querySelector('.room-expand-btn').addEventListener('click',()=>openRoomDetail(roomId,room,nick1,nick2,uid1,uid2));
+    content.appendChild(card);
   });
 }
+
+// ── Room Detail Overlay ──
+function openRoomDetail(roomId, room, nick1, nick2, uid1, uid2){
+  document.getElementById('detail-title').textContent=`${nick1} vs ${nick2}`;
+  const recalled=room.msgs.filter(m=>m.recalled).length;
+  document.getElementById('detail-stats').textContent=`${room.msgs.length} 則訊息・${recalled} 則已收回`;
+
+  renderDetailMsgs(room, uid1, uid2);
+  document.getElementById('room-detail').classList.add('show');
+}
+
+function renderDetailMsgs(room, uid1, uid2){
+  const container=document.getElementById('detail-msgs');
+  container.innerHTML='';
+
+  let msgs=room.msgs;
+  // 依 roomDetailFilter 篩選
+  if(roomDetailFilter==='recalled') msgs=msgs.filter(m=>m.recalled);
+
+  if(!msgs.length){
+    container.innerHTML='<div class="empty" style="padding:30px"><div class="empty-icon">✅</div><div>沒有已收回的訊息</div></div>';
+    return;
+  }
+
+  // 以對話氣泡方式顯示，uid1 視為「左邊」
+  msgs.forEach(msg=>{
+    const isLeft = msg.uid===uid1;
+    const color=avatarColor(msg.uid||'');
+    const row=document.createElement('div');
+    row.className='dm-bubble-row'+(isLeft?'':' me');
+
+    let bubbleContent='';
+    if(msg.type==='file'){
+      bubbleContent=`📎 <strong>${esc(msg.fileName)}</strong> <a href="${msg.url||''}" target="_blank" style="color:var(--accent)">開啟</a>`;
+    } else if(msg.recalled&&msg.text&&msg.text!=='[訊息已收回]'){
+      bubbleContent=`🔴 ${esc(msg.text)}`;
+    } else {
+      bubbleContent=esc(msg.text||'');
+    }
+
+    const isRecalledClass=msg.recalled?' is-recalled':'';
+    row.innerHTML=`
+      <div class="dm-bubble-av" style="background:${color}">${initials(msg.nick)}</div>
+      <div class="dm-bubble-content">
+        <div class="dm-bubble-name">${esc(msg.nick)} ${msg.recalled?'<span style="color:var(--danger);font-size:0.65rem">・已收回</span>':''}</div>
+        <div class="dm-bubble${isRecalledClass}">${bubbleContent}</div>
+        <div class="dm-bubble-time">${formatFull(msg.ts)}</div>
+        <div class="dm-bubble-actions"></div>
+      </div>
+    `;
+
+    const acts=row.querySelector('.dm-bubble-actions');
+    if(msg.recalled){
+      const r=document.createElement('button');r.className='dm-bubble-act restore';r.textContent='↩ 還原';
+      r.addEventListener('click',async()=>{await restoreMsg(msg);room.msgs.find(m=>m._key===msg._key).recalled=false;renderDetailMsgs(room,uid1,uid2);});
+      acts.appendChild(r);
+    }
+    const d=document.createElement('button');d.className='dm-bubble-act danger';d.textContent='🗑 刪除';
+    d.addEventListener('click',async()=>{await deleteMsg(msg);room.msgs=room.msgs.filter(m=>m._key!==msg._key);renderDetailMsgs(room,uid1,uid2);});
+    acts.appendChild(d);
+
+    container.appendChild(row);
+  });
+}
+
+document.getElementById('close-detail').addEventListener('click',()=>{
+  document.getElementById('room-detail').classList.remove('show');
+});
+document.getElementById('room-detail').addEventListener('click',e=>{
+  if(e.target===document.getElementById('room-detail'))
+    document.getElementById('room-detail').classList.remove('show');
+});
+
+// view toggle (all / recalled) in room detail
+document.querySelectorAll('.view-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    roomDetailFilter=btn.dataset.view;
+    // 重新render（如果 detail 開著）
+    const detail=document.getElementById('room-detail');
+    if(detail.classList.contains('show')) renderContent();
+    else renderContent();
+  });
+});
 
 // ── Actions ──
 async function restoreMsg(msg){
   if(!confirm(`確定還原「${msg.nick}」的訊息？`))return;
-  const path=msg._source==='global'
-    ?`global/messages/${msg._key}`
-    :`dms/${msg._roomId}/messages/${msg._key}`;
+  const path=msg._source==='global'?`global/messages/${msg._key}`:`dms/${msg._roomId}/messages/${msg._key}`;
   await update(dbRef(db,path),{recalled:false});
+  msg.recalled=false;
   toast('✅ 訊息已還原');
   await loadAll();
 }
-
 async function deleteMsg(msg){
-  if(!confirm(`⚠️ 確定永久刪除「${msg.nick}」的訊息？此操作無法復原。`))return;
-  const path=msg._source==='global'
-    ?`global/messages/${msg._key}`
-    :`dms/${msg._roomId}/messages/${msg._key}`;
+  if(!confirm(`⚠️ 確定永久刪除「${msg.nick}」的訊息？`))return;
+  const path=msg._source==='global'?`global/messages/${msg._key}`:`dms/${msg._roomId}/messages/${msg._key}`;
   await remove(dbRef(db,path));
   toast('🗑 訊息已永久刪除');
   await loadAll();
 }
 
-// ── Filter & Search ──
+// ── Filters ──
 document.querySelectorAll('.filter-btn').forEach(btn=>{
   btn.addEventListener('click',()=>{
     document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
     currentFilter=btn.dataset.filter;
-    renderList();
+    renderContent();
   });
 });
-
 document.getElementById('search-input').addEventListener('input',e=>{
   searchQuery=e.target.value.trim();
-  renderList();
+  renderContent();
 });
 </script>
 </body>
