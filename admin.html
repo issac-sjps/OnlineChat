@@ -83,9 +83,11 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .msg-body{font-size:0.88rem;line-height:1.6;background:var(--bg);padding:10px 14px;border-radius:8px;word-break:break-word}
 .msg-body.recalled-text{color:var(--danger);font-style:italic}
 .msg-actions{margin-top:10px;display:flex;gap:8px}
-.btn-act{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:0.78rem;font-family:inherit;transition:all 0.15s}
-.btn-act.restore:hover{border-color:var(--online);color:var(--online)}
-.btn-act.danger:hover{border-color:var(--danger);color:var(--danger)}
+.btn-act{padding:7px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-size:0.85rem;font-family:inherit;transition:all 0.15s;font-weight:500}
+.btn-act.restore{border-color:rgba(52,211,153,0.4);color:var(--online)}
+.btn-act.restore:hover{background:rgba(52,211,153,0.12);border-color:var(--online)}
+.btn-act.danger{border-color:rgba(248,113,113,0.4);color:var(--danger)}
+.btn-act.danger:hover{background:rgba(248,113,113,0.12);border-color:var(--danger)}
 
 /* ── Room cards (房間模式) ── */
 .room-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color 0.2s,box-shadow 0.2s;cursor:pointer}
@@ -128,11 +130,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .dm-bubble-row.me .dm-bubble{background:#1e3a5f;border-bottom-right-radius:4px}
 .dm-bubble.is-recalled{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);color:var(--danger);font-style:italic}
 .dm-bubble-time{font-size:0.65rem;color:var(--muted);padding:0 4px}
-.dm-bubble-actions{display:flex;gap:4px;margin-top:2px}
-.dm-bubble-act{padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:0.7rem;font-family:inherit;transition:all 0.15s;opacity:0}
-.dm-bubble-row:hover .dm-bubble-act{opacity:1}
-.dm-bubble-act.restore:hover{border-color:var(--online);color:var(--online)}
-.dm-bubble-act.danger:hover{border-color:var(--danger);color:var(--danger)}
+.dm-bubble-actions{display:flex;gap:6px;margin-top:6px}
+.dm-bubble-act{padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-size:0.82rem;font-family:inherit;transition:all 0.15s;font-weight:500}
+.dm-bubble-act.restore{border-color:rgba(52,211,153,0.4);color:var(--online)}
+.dm-bubble-act.restore:hover{background:rgba(52,211,153,0.12);border-color:var(--online)}
+.dm-bubble-act.danger{border-color:rgba(248,113,113,0.4);color:var(--danger)}
+.dm-bubble-act.danger:hover{background:rgba(248,113,113,0.12);border-color:var(--danger)}
 
 /* ── Empty / Loading ── */
 .empty{text-align:center;padding:60px 20px;color:var(--muted)}
