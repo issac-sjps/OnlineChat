@@ -327,7 +327,7 @@ body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
 import { getAuth, signInAnonymously, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
-import { getDatabase, ref as dbRef, set, get, push, remove, update, onValue, onChildAdded, onDisconnect, serverTimestamp, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
+import { getDatabase, ref as dbRef, set, get, push, remove, update, onValue, onChildAdded, onChildChanged, onDisconnect, serverTimestamp, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCsjUt0p8q0lV5ThMnAfJva60YkvfP-jlk",
@@ -709,11 +709,23 @@ function listenGlobal(){
   const mc=document.getElementById('global-messages');
   const q=query(dbRef(db,'global/messages'),limitToLast(MAX_GLOBAL_MSGS));
   onChildAdded(q,snap=>{renderGlobalMsg(snap.val(),mc,snap.key);scrollBottom(mc);});
+  // 即時更新收回狀態
+  onChildChanged(q,snap=>{
+    const msg=snap.val();
+    if(!msg.recalled)return;
+    const existing=document.querySelector(`[data-msgkey="${snap.key}"]`);
+    if(existing){
+      const isSelf=msg.uid===myUid;
+      const rd=document.createElement('div');rd.className='msg-system';
+      rd.textContent=(isSelf?'你':'對方')+' 收回了一則訊息';
+      existing.replaceWith(rd);
+    }
+  });
 }
 function renderGlobalMsg(msg,container,key){
   if(msg.type==='system'){const d=document.createElement('div');d.className='msg-system';d.textContent=msg.text;container.appendChild(d);return;}
   const isSelf=msg.uid===myUid;
-  const div=document.createElement('div');div.className='msg-row '+(isSelf?'self':'other');
+  const div=document.createElement('div');div.className='msg-row '+(isSelf?'self':'other');div.dataset.msgkey=key;
   // 已收回：只顯示提示
   if(msg.recalled){
     const rd=document.createElement('div');rd.className='msg-system';
@@ -773,7 +785,19 @@ function openDM(uid,nick){
   document.querySelectorAll('.user-item,.dm-conv-item').forEach(el=>el.classList.remove('active'));
   const mc=document.getElementById('dm-messages');
   const q=query(dbRef(db,'dms/'+dmRoomId+'/messages'),limitToLast(100));
-  dmUnsub=onChildAdded(q,snap=>{const msgEl=renderDMMsg(snap.val(),mc,dmRoomId,snap.key);scrollBottom(mc);});
+  const unsubAdded=onChildAdded(q,snap=>{renderDMMsg(snap.val(),mc,dmRoomId,snap.key);scrollBottom(mc);});
+  const unsubChanged=onChildChanged(dbRef(db,'dms/'+dmRoomId+'/messages'),snap=>{
+    const msg=snap.val();
+    if(!msg.recalled)return;
+    const existing=document.querySelector(`[data-msgkey="${snap.key}"]`);
+    if(existing){
+      const isSelf=msg.uid===myUid;
+      const rd=document.createElement('div');rd.className='msg-system';
+      rd.textContent=(isSelf?'你':'對方')+' 收回了一則訊息';
+      existing.replaceWith(rd);
+    }
+  });
+  dmUnsub=()=>{unsubAdded();unsubChanged();};
   document.getElementById('dm-send').onclick=sendDM;
   document.getElementById('dm-input').onkeydown=e=>{if(e.key==='Enter')sendDM();};
 }
@@ -785,7 +809,7 @@ function renderDMMsg(msg,container,roomId,key){
     rd.textContent=(isSelf?'你':'對方')+' 收回了一則訊息';
     container.appendChild(rd);return;
   }
-  const div=document.createElement('div');div.className='msg-row '+(isSelf?'self':'other');
+  const div=document.createElement('div');div.className='msg-row '+(isSelf?'self':'other');div.dataset.msgkey=key;
   const avHtml=isSelf?'':`<div class="msg-avatar" style="background:${avatarColor(msg.uid)}">${getAvatarText(msg.uid,msg.nick)}</div>`;
   const nmHtml=isSelf?'':`<span class="msg-author" style="color:${avatarColor(msg.uid)}">${escapeHtml(msg.nick)}</span>`;
   let bubbleHtml;
